@@ -17,6 +17,7 @@ NYU Shanghai 课程评价与历史存档平台。半封闭式（仅限 @nyu.edu 
 | 层级 | 技术 | 说明 |
 |------|------|------|
 | 前端框架 | Next.js 14 App Router | 使用 Server / Client Component 分层 |
+| 国际化 | next-intl | 支持中英文 UI 切换，路由基于 app/[locale] 目录 |
 | UI 组件 | shadcn/ui + Tailwind CSS | shadcn 组件在 `src/components/ui/`，不手动修改 |
 | 后端 | Next.js API Routes | 所有后端逻辑在 `src/app/api/` |
 | 数据库 | Supabase (PostgreSQL) | 不使用 Prisma，直接用 Supabase JS 客户端 |
@@ -30,19 +31,22 @@ NYU Shanghai 课程评价与历史存档平台。半封闭式（仅限 @nyu.edu 
 ```
 src/
 ├── app/
-│   ├── (auth)/                         # 登录注册路由组，不需要登录态
-│   │   ├── login/page.tsx
-│   │   ├── register/page.tsx
-│   │   └── reset-password/page.tsx
+│   ├── [locale]/                       # i18n 国际化路由匹配，支持中英切换
+│   │   ├── (auth)/                     # 登录注册路由组，不需要登录态
+│   │   │   ├── login/page.tsx
+│   │   │   ├── register/page.tsx
+│   │   │   └── reset-password/page.tsx
+│   │   │
+│   │   ├── (main)/                     # 登录后才能访问，middleware 统一守卫
+│   │   │   ├── page.tsx                # 首页 / 课程搜索
+│   │   │   ├── courses/[id]/page.tsx   # 课程详情 + 评价列表
+│   │   │   ├── reviews/new/page.tsx    # 写评价
+│   │   │   ├── reviews/[id]/edit/page.tsx
+│   │   │   └── profile/page.tsx        # 我的评价
+│   │   │
+│   │   └── layout.tsx                  # 根布局，提供 next-intl 翻译上下文
 │   │
-│   ├── (main)/                         # 登录后才能访问，middleware 统一守卫
-│   │   ├── page.tsx                    # 首页 / 课程搜索
-│   │   ├── courses/[id]/page.tsx       # 课程详情 + 评价列表
-│   │   ├── reviews/new/page.tsx        # 写评价
-│   │   ├── reviews/[id]/edit/page.tsx  # 改评价
-│   │   └── profile/page.tsx           # 我的评价
-│   │
-│   └── api/                            # 后端 API，前端只能通过这里访问数据库
+│   └── api/                            # 后端 API，不需要经过 i18n 路由，前端只能通过这里访问数据库
 │       ├── auth/
 │       │   ├── register/route.ts       # 邮箱后缀校验 + 调用 Supabase 注册
 │       │   └── callback/route.ts       # Supabase Auth 邮箱验证回调
@@ -93,7 +97,12 @@ src/
     ├── supabase-browser.ts             # 前端 Supabase 客户端，使用 anon key
     └── cn.ts                           # shadcn className 工具函数
 
-middleware.ts                           # 根目录，全局路由守卫
+messages/                               # i18n 翻译文件
+├── en.json
+└── zh.json
+
+middleware.ts                           # 根目录，全局路由守卫（包含 next-intl 路由拦截）
+i18n.ts                                 # next-intl 配置或请求级别配置
 supabase/migrations/                    # 建表 SQL，按版本管理
 .env.local                              # 真实密钥，不提交 git
 .env.example                            # 密钥模板，提交 git
@@ -279,4 +288,5 @@ RESEND_API_KEY=                                    # MVP 阶段留空，用 Supa
 2. **生成前端组件时**：数据获取通过 `hooks/` 调用 `/api/` 路由，不直接 import `lib/`
 3. **生成数据库查询时**：使用 `lib/db/supabase.ts` 服务端客户端，不使用 `utils/supabase-browser.ts`
 4. **新增表字段时**：同步更新 `supabase/migrations/` 和 `types/index.ts`
-5. **所有新页面**：默认放在 `(main)/` 路由组，除非明确是登录前可访问的
+5. **所有新页面**：默认放在 `[locale]/(main)/` 路由组，除非明确是登录前可访问的
+6. **i18n 翻译**：所有静态文案使用 `next-intl`，不在组件内硬编码中文或英文
