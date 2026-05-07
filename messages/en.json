@@ -1,0 +1,39 @@
+{
+  "auth": {
+    "title": "NYUSH Course Reviews",
+    "subtitle": "Sign in to browse and post course reviews",
+    "tabs": {
+      "login": "Sign in",
+      "register": "Register"
+    },
+    "fields": {
+      "netid": "NetID",
+      "password": "Password",
+      "confirmPassword": "Confirm password"
+    },
+    "placeholders": {
+      "netid": "e.g. abc1234",
+      "password": "At least 8 characters"
+    },
+    "buttons": {
+      "login": "Sign in",
+      "register": "Register",
+      "loggingIn": "Signing in…",
+      "registering": "Submitting…"
+    },
+    "hints": {
+      "netidOnly": "Enter your NetID only — the @nyu.edu suffix is fixed"
+    },
+    "errors": {
+      "invalidNetid": "Invalid NetID (must start with a letter, 2–15 alphanumeric chars)",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "passwordMismatch": "Passwords do not match",
+      "loginFailed": "Sign-in failed: incorrect email or password",
+      "registerFailed": "Registration failed, please try again later",
+      "emailNotAllowed": "Only @nyu.edu emails are allowed"
+    },
+    "messages": {
+      "registerSuccess": "Registered. Check your inbox to verify, then sign in."
+    }
+  }
+}

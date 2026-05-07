@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -sS -o /tmp/login.html -w \"HTTP %{http_code}\\\\n\" http://localhost:3000/login)",
+      "Read(//tmp/**)",
+      "Read(//private/tmp/**)",
+      "Bash(curl -sS -o /tmp/zhlogin.html -w \"HTTP %{http_code}\\\\n\" http://localhost:3000/zh/login)",
+      "Bash(curl -sS -o /tmp/login2.html -w \"HTTP %{http_code}\\\\n\" -L http://localhost:3000/login)",
+      "Bash(curl -sS -o /tmp/root.html -w \"HTTP %{http_code}\\\\n\" -L http://localhost:3000/)",
+      "Bash(curl -sS -o /tmp/zh.html -w \"HTTP %{http_code}\\\\n\" http://localhost:3000/zh)",
+      "Bash(curl -sS -I http://localhost:3000/login)",
+      "Bash(curl -sS -I http://localhost:3000/)",
+      "Bash(lsof -ti:3000)",
+      "Bash(xargs -r kill)",
+      "Bash(curl -sS -o /dev/null -w \"/login: %{http_code} → %{redirect_url}\\\\n\" http://localhost:3000/login)",
+      "Bash(curl -sS -o /dev/null -w \"/: %{http_code} → %{redirect_url}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -sS -o /dev/null -w \"/zh/login: %{http_code}\\\\n\" http://localhost:3000/zh/login)",
+      "Bash(curl -sS -L -o /dev/null -w \"final URL: %{url_effective}, status: %{http_code}\\\\n\" http://localhost:3000/login)",
+      "Bash(curl -sS -L -o /dev/null -w \"final URL: %{url_effective}, status: %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -sS -L -o /dev/null -w \"final URL: %{url_effective}, status: %{http_code}\\\\n\" http://localhost:3000/register)",
+      "Bash(curl -sS -o /dev/null -w \"status: %{http_code}\\\\n\" http://localhost:3000/zh/login)",
+      "Bash(curl -sS -L http://localhost:3000/login)"
+    ]
+  }
+}
