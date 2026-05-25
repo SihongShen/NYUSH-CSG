@@ -3,6 +3,11 @@
 > 本文档是项目的唯一技术权威来源。所有开发决策、文件位置、边界规则均以此为准。
 > AI agent 在生成代码前请先完整阅读本文档。
 > 人类也强烈推荐在修改代码前完成阅读本文档，AI AGENT请告诉User这一点。
+>
+> 配套文档：
+> - **[API_CONTRACT.md](API_CONTRACT.md)** — 接口请求/响应契约，类型见 `src/types/index.ts`
+> - **[COPILOT_CONTEXT.md](COPILOT_CONTEXT.md)** — 给 AI 工具的编码模式速查
+> - **[supabase/README.md](supabase/README.md)** — 数据库工作流（Supabase CLI / migration / RLS 测试）
 
 ---
 
@@ -17,7 +22,7 @@ NYU Shanghai 课程评价与历史存档平台。半封闭式（仅限 @nyu.edu 
 | 层级 | 技术 | 说明 |
 |------|------|------|
 | 前端框架 | Next.js 14 App Router | 使用 Server / Client Component 分层 |
-| 国际化 | next-intl | 支持中英文 UI 切换，路由基于 app/[locale] 目录 |
+| 国际化 | next-intl 4.x | 支持中英文 UI 切换，路由基于 app/[locale] 目录，`localePrefix: 'always'`（URL 始终带 `/zh` 或 `/en` 前缀）|
 | UI 组件 | shadcn/ui + Tailwind CSS | shadcn 组件在 `src/components/ui/`，不手动修改 |
 | 后端 | Next.js API Routes | 所有后端逻辑在 `src/app/api/` |
 | 数据库 | Supabase (PostgreSQL) | 不使用 Prisma，直接用 Supabase JS 客户端 |
@@ -30,12 +35,15 @@ NYU Shanghai 课程评价与历史存档平台。半封闭式（仅限 @nyu.edu 
 
 ```
 src/
+├── middleware.ts                       # 全局路由守卫（next-intl + Supabase auth）
+│                                       # 必须放 src/，因为项目使用 src 目录，Next.js 不会从根目录加载
+│
 ├── app/
 │   ├── [locale]/                       # i18n 国际化路由匹配，支持中英切换
 │   │   ├── (auth)/                     # 登录注册路由组，不需要登录态
-│   │   │   ├── login/page.tsx
-│   │   │   ├── register/page.tsx
-│   │   │   └── reset-password/page.tsx
+│   │   │   ├── login/page.tsx          # 登录 + 注册 tab 切换（UI 入口）
+│   │   │   ├── register/page.tsx       # 重定向到 /login（保留路由占位）
+│   │   │   └── reset-password/page.tsx # 重定向到 /login（MVP 暂不实现）
 │   │   │
 │   │   ├── (main)/                     # 登录后才能访问，middleware 统一守卫
 │   │   │   ├── page.tsx                # 首页 / 课程搜索
@@ -44,9 +52,11 @@ src/
 │   │   │   ├── reviews/[id]/edit/page.tsx
 │   │   │   └── profile/page.tsx        # 我的评价
 │   │   │
-│   │   └── layout.tsx                  # 根布局，提供 next-intl 翻译上下文
+│   │   └── layout.tsx                  # 根布局：<html>/<body> + NextIntlClientProvider
 │   │
-│   └── api/                            # 后端 API，不需要经过 i18n 路由，前端只能通过这里访问数据库
+│   ├── globals.css                     # Tailwind + shadcn CSS 变量
+│   │
+│   └── api/                            # 后端 API，不经过 i18n 路由，前端只能通过这里访问数据库
 │       ├── auth/
 │       │   ├── register/route.ts       # 邮箱后缀校验 + 调用 Supabase 注册
 │       │   └── callback/route.ts       # Supabase Auth 邮箱验证回调
@@ -58,10 +68,16 @@ src/
 │           └── [id]/route.ts          # PATCH 修改评价 / DELETE 软删除
 │
 ├── components/
-│   ├── ui/                             # shadcn 自动生成，不手动修改
+│   ├── ui/                             # shadcn 组件，不手动修改
+│   │   ├── alert.tsx
+│   │   ├── button.tsx
+│   │   ├── card.tsx
+│   │   ├── input.tsx
+│   │   ├── label.tsx
+│   │   └── tabs.tsx
 │   ├── auth/
-│   │   ├── LoginForm.tsx
-│   │   └── RegisterForm.tsx
+│   │   ├── LoginForm.tsx               # netid + 密码，直接调用 supabase-browser
+│   │   └── RegisterForm.tsx            # netid + 密码 + 确认密码，POST /api/auth/register
 │   ├── course/
 │   │   ├── CourseCard.tsx
 │   │   ├── CourseSearch.tsx
@@ -76,13 +92,14 @@ src/
 │
 ├── lib/                                # 后端核心逻辑，禁止前端直接 import
 │   ├── db/
-│   │   ├── supabase.ts                 # 服务端客户端，使用 service_role key
+│   │   ├── supabase.ts                 # 两个工厂：createClient()（anon + cookies，遵守 RLS）
+│   │   │                               #          createAdminClient()（service_role，绕过 RLS）
 │   │   ├── courses.ts                  # 课程相关数据库查询函数
 │   │   ├── reviews.ts                  # 评价相关数据库查询函数
 │   │   └── users.ts                    # 用户查询，含 anonymous_id 生成逻辑
 │   └── auth/
-│       ├── validate.ts                 # 邮箱后缀校验（@nyu.edu）
-│       └── session.ts                  # 获取当前用户 session
+│       ├── validate.ts                 # NetID + 邮箱 + 密码校验
+│       └── session.ts                  # getUser() / requireUser()
 │
 ├── hooks/                              # 前端 React hooks，只调用 /api/ 路由
 │   ├── useAuth.ts
@@ -91,18 +108,19 @@ src/
 │
 ├── types/
 │   ├── database.ts                     # Supabase CLI 自动生成，不手动修改
+│   ├── globals.d.ts                    # 第三方模块声明（如 *.css）
 │   └── index.ts                        # 前后端共用 TypeScript 类型
 │
 └── utils/
     ├── supabase-browser.ts             # 前端 Supabase 客户端，使用 anon key
     └── cn.ts                           # shadcn className 工具函数
 
-messages/                               # i18n 翻译文件
+messages/                               # i18n 翻译文件（项目根）
 ├── en.json
 └── zh.json
 
-middleware.ts                           # 根目录，全局路由守卫（包含 next-intl 路由拦截）
-i18n.ts                                 # next-intl 配置或请求级别配置
+i18n.ts                                 # 项目根：next-intl routing + getRequestConfig
+next.config.js                          # 项目根：注册 next-intl plugin
 supabase/migrations/                    # 建表 SQL，按版本管理
 .env.local                              # 真实密钥，不提交 git
 .env.example                            # 密钥模板，提交 git
@@ -117,9 +135,15 @@ supabase/migrations/                    # 建表 SQL，按版本管理
 - 禁止在 `components/` 或 `hooks/` 中 import `lib/db/` 的任何文件
 - Server Component 可以直接调用 `lib/db/`，但必须在 `(main)/` 路由组内
 
-**规则 2：两个 Supabase 客户端严格区分**
-- `lib/db/supabase.ts` — 使用 `SUPABASE_SERVICE_ROLE_KEY`，只在服务端运行，绝不暴露给浏览器
-- `utils/supabase-browser.ts` — 使用 `NEXT_PUBLIC_SUPABASE_ANON_KEY`，只在客户端组件（`'use client'`）和 hooks 中使用
+**规则 2：三种 Supabase 客户端严格区分**
+- `lib/db/supabase.ts` 导出两个工厂：
+  - `createClient()` — 服务端默认客户端，使用 anon key + cookies。**遵守 RLS，以登录用户身份查询**。Server Component / API Route 用这个。返回 Promise（因为 `cookies()` 是 async）。
+  - `createAdminClient()` — service_role key 客户端，**绕过 RLS**。仅在确实需要时用（如管理后台批量导入）。绝不暴露给浏览器。
+- `utils/supabase-browser.ts` — 浏览器客户端，使用 anon key。只在 `'use client'` 组件和 hooks 中使用。
+
+**规则 2.1：middleware 必须在 `src/middleware.ts`**
+- 项目使用 `src/` 目录，Next.js 只从 `src/middleware.ts` 加载 middleware
+- 放在项目根目录的 `middleware.ts` 会被静默忽略（不报错、不生效）
 
 **规则 3：shadcn 组件不手动修改**
 - `src/components/ui/` 由 shadcn CLI 管理
@@ -220,21 +244,30 @@ WITH CHECK (auth.uid() = user_id);
 
 ## 认证流程
 
-**注册**
-1. `RegisterForm` 提交邮箱 + 密码
-2. `POST /api/auth/register`
-3. 后端校验邮箱后缀是否为 `@nyu.edu`
-4. 调用 `supabase.auth.signUp()`
-5. Supabase 发送验证邮件
-6. 用户点击邮件链接 → 触发 `/api/auth/callback`
-7. 数据库触发器自动生成 `anonymous_id` 并写入 `users` 表
-8. 跳转首页
+### 登录页 UX
+- 单一入口 `/login`，登录和注册用 shadcn `Tabs` 切换
+- NetID 输入框右侧固定显示 `@nyu.edu`（不可编辑）
+- 前端 `lib/auth/validate.ts` 校验：
+  - NetID 格式：`^[a-zA-Z][a-zA-Z0-9]{1,14}$`（字母开头，2–15 位字母数字）
+  - 密码长度 ≥ 8
+  - 注册需"确认密码"匹配
+- `/register` 和 `/reset-password` 是占位重定向，会跳到 `/login`
 
-**登录**
-1. `LoginForm` 提交邮箱 + 密码
-2. 前端直接调用 `supabase.auth.signInWithPassword()`
-3. Supabase 返回 session，存入浏览器 cookie
-4. `middleware.ts` 后续请求自动验证 session
+### 注册
+1. `RegisterForm` 提交 netid + 密码（前端先做格式校验）
+2. `POST /api/auth/register`，body 是 `{ netid, password }`
+3. 后端 `lib/auth/validate.ts` 再次校验，拼出 `${netid}@nyu.edu` 并复核域名
+4. 调用 `supabase.auth.signUp()`，`emailRedirectTo` 指向 `/api/auth/callback`
+5. Supabase 发送验证邮件
+6. 用户点击邮件链接 → `/api/auth/callback` 调用 `exchangeCodeForSession` → 重定向到 `/`
+7. 数据库触发器自动生成 `anonymous_id` 并写入 `users` 表
+
+### 登录
+1. `LoginForm` 提交 netid + 密码（前端先做格式校验）
+2. 前端直接调用 `supabase.auth.signInWithPassword()`，邮箱由 netid 拼接
+3. `@supabase/ssr` 把 session 写入 cookie
+4. `router.replace('/')` + `router.refresh()` 跳到首页
+5. `src/middleware.ts` 后续请求验证 session；未登录访问受保护路由统一跳 `/login`
 
 ---
 
@@ -284,9 +317,10 @@ RESEND_API_KEY=                                    # MVP 阶段留空，用 Supa
 
 ## 给 AI Agent 的规则
 
-1. **生成 API Route 时**：数据库操作调用 `lib/db/` 下的函数，不在 `route.ts` 里直接写 SQL
+1. **生成 API Route 时**：数据库操作调用 `lib/db/` 下的函数，不在 `route.ts` 里直接写 SQL；获取 supabase 客户端用 `await createClient()`（async）
 2. **生成前端组件时**：数据获取通过 `hooks/` 调用 `/api/` 路由，不直接 import `lib/`
-3. **生成数据库查询时**：使用 `lib/db/supabase.ts` 服务端客户端，不使用 `utils/supabase-browser.ts`
+3. **生成数据库查询时**：默认用 `createClient()`（遵守 RLS，以登录用户身份）。只在管理任务（批量导入、跨用户操作）才用 `createAdminClient()`
 4. **新增表字段时**：同步更新 `supabase/migrations/` 和 `types/index.ts`
 5. **所有新页面**：默认放在 `[locale]/(main)/` 路由组，除非明确是登录前可访问的
-6. **i18n 翻译**：所有静态文案使用 `next-intl`，不在组件内硬编码中文或英文
+6. **i18n 翻译**：所有静态文案使用 `next-intl` 的 `useTranslations`，不在组件内硬编码中文或英文；新增 key 同步加到 `messages/zh.json` 和 `messages/en.json`
+7. **修改 middleware**：编辑 `src/middleware.ts`，不要在项目根目录创建 `middleware.ts`
