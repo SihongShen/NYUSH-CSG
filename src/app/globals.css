@@ -24,6 +24,10 @@
     --input: 220 13% 90%;
     --ring: 251 46% 34%;
     --radius: 0.375rem;
+
+    /* NYU 官方品牌色 #57068C，用于 Navbar / 校区品牌区域 */
+    --nyu-violet: 276 92% 29%;
+    --nyu-violet-foreground: 0 0% 100%;
   }
 
   * {

@@ -1,6 +1,7 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
+import { Toaster } from '@/components/ui/sonner';
 import { routing, type AppLocale } from '../../../i18n';
 import '../globals.css';
 
@@ -21,6 +22,7 @@ export default async function LocaleLayout({
       <body className="min-h-screen bg-background text-foreground antialiased">
         <NextIntlClientProvider messages={messages} locale={locale}>
           {children}
+          <Toaster />
         </NextIntlClientProvider>
       </body>
     </html>

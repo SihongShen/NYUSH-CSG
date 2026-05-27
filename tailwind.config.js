@@ -42,6 +42,10 @@ module.exports = {
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))'
+        },
+        'nyu-violet': {
+          DEFAULT: 'hsl(var(--nyu-violet))',
+          foreground: 'hsl(var(--nyu-violet-foreground))'
         }
       },
       borderRadius: {

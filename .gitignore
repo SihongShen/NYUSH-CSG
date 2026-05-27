@@ -40,3 +40,6 @@ next-env.d.ts
 
 # claude
 .claude
+
+# 私人 scratch 笔记（不上 git）
+_*.md
