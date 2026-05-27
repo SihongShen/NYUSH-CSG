@@ -57,19 +57,19 @@
 **Query**: [`CourseSearchQuery`](src/types/index.ts) `{ q?, category?, department?, limit?, offset? }`  
 **200**: `Paginated<Course>` — `{ items: Course[], total, limit, offset }`  
 **业务规则**:
-- 只返回 `is_verified = true` 的课程（管理员审核后才可见）
+- 返回所有课程（MVP 不做审核过滤；`is_verified` 字段保留供未来扩展）
 - `q` 模糊匹配 `code` / `name_en` / 关联教授名（ILIKE）
 - TODO: 教授名联表查询的具体写法 —— 用 `lib/db/courses.ts` 封装
 
 ### `POST /api/courses`
 **Auth**: 需要登录  
 **Body**: [`CourseApplyPayload`](src/types/index.ts) `{ code, name_en, category?, core_type?, department?, professor_names[] }`  
-**201**: `{ id }` — 新建课程 ID（`is_verified=false`，待管理员审核）  
+**201**: `{ id }` — 新建课程 ID（MVP 立即可见）  
 **400**: `validation`（`code` / `name_en` 缺失，`category=Core` 时必须有 `core_type`）  
 **409**: `conflict`（同 `code` + 同 `professor_names` 组合已存在）  
 **业务规则**:
-- 新建时 `is_verified=false`，不进搜索结果，只待管理员审核
-- 同名教授若不存在则同时创建（`is_verified=false`）
+- MVP 阶段新建课程立即可见，不做审核
+- 同名教授若不存在则同时创建
 
 ### `GET /api/courses/[id]`
 **Auth**: 需要登录  
@@ -129,6 +129,6 @@
 
 - [ ] 课程详情页是否要把"该课所有评价"一起返回？（性能 vs 多一次请求）
 - [ ] 评价点赞 / 举报 endpoint（MVP 不实现）
-- [ ] 管理员审核 endpoint（`PATCH /api/admin/courses/:id` 等，等做 admin 后台时再加）
+- [ ] 课程 / 教授审核 endpoint + admin 角色（等做 admin 后台时再加）
 - [ ] 速率限制 / 防滥用策略（注册、提交评价）
 - [ ] `site` 枚举的最终列表（先用宽松字符串，正式上线前定）

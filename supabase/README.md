@@ -78,6 +78,8 @@ npm run dev
 
 ## 日常开发命令速查
 
+> **本地命令**直接用下面的原生 `supabase`。**远端命令**（push / pull / diff / list / repair）可以用项目根目录的 [Makefile](../Makefile) 省掉 `--db-url` 长字符串，跑 `make help` 看用法。
+
 | 命令 | 作用 |
 |------|------|
 | `supabase start` | 启动本地 stack（Docker） |
@@ -145,6 +147,32 @@ fetch('http://localhost:54321/rest/v1/users?select=*', {
 ---
 
 ## 常见坑
+
+### VPN / 代理下远端 CLI 命令连不上
+
+CLI 默认走 **IPv6 直连** 远端 DB（`db.<ref>.supabase.co:5432`）。如果你电脑跑着 VPN / 代理，IPv6 路由经常被打断，会报：
+
+```
+failed to connect to postgres: ... tls error ... socket is not connected
+```
+
+解决方法：用 Supabase **Session pooler**（IPv4）替代直连。
+
+1. `cp .env.cli.example .env.cli`
+2. 去 Supabase Dashboard 右上角 **Connect** → **Session pooler** tab，复制 URI
+3. 把里面的 `[YOUR-PASSWORD]` 换成你的数据库密码（建项目时设的）
+4. 粘到 `.env.cli` 的 `SUPABASE_DB_URL=` 后
+
+`.env.cli` 已 gitignore，不会进 git。配好后用根目录的 [Makefile](../Makefile)：
+
+```bash
+make list      # 看 migration 对齐
+make push      # 推 migration
+make diff      # 看 schema 差异
+make repair MIG=20260521000001
+```
+
+不配 `.env.cli` 时 `make` 命令自动跳过 `--db-url` flag，走 CLI 默认直连。所以 IPv6 网络 OK 的人可以完全不管这套。
 
 ### M1/M2 Mac Docker 慢
 `supabase start` 第一次拉 image 巨慢且耗内存。建议给 Docker Desktop 至少分配 4GB 内存（Settings → Resources）。

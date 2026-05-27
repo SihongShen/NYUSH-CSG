@@ -18,14 +18,12 @@ export type ApiError = {
 // DB-mirroring entity types (snake_case 对齐 Postgres 列名)
 // ============================================================================
 
-export type UserRole = 'user' | 'admin';
-
 export interface User {
   id: string;
   email: string;
   anonymous_id: string;
-  role: UserRole;
   created_at: string;
+  // role 字段在 DB 里有，MVP 不暴露给类型层；做 admin 时再加回来
 }
 
 export type CourseCategory = 'Core' | 'Major' | 'Elective';

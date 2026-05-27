@@ -164,7 +164,7 @@ supabase/migrations/                    # 建表 SQL，按版本管理
 id            uuid  PK  -- 与 Supabase auth.users 同步
 email         text  UNIQUE NOT NULL  -- 仅限 @nyu.edu
 anonymous_id  text  UNIQUE NOT NULL  -- 注册时触发器自动生成，8位随机字符串
-role          text  DEFAULT 'user'   -- 'user' | 'admin'（admin 暂未实现）
+role          text  DEFAULT 'user'   -- MVP 只有 'user' 一个值；字段保留供将来扩展
 created_at    timestamptz DEFAULT now()
 ```
 
@@ -177,7 +177,7 @@ category      text                   -- 'Core' / 'Major' / 'Elective'
 core_type     text                   -- 'GPS' / 'PoH' / 'IPC' / 'WAI' / 'ED' / 'STS' / 'AT' / 'EAP'
                                      -- category = 'Core' 时填，否则 null
 department    text                   -- 'CS' / 'IMA' / 'ECON' 等，Core 课留 null
-is_verified   boolean DEFAULT false  -- 管理员审核后改 true 才显示
+is_verified   boolean DEFAULT true   -- 字段为未来审核流程预留；MVP 默认 true，不在 RLS 中过滤
 equivalent_id uuid  FK → courses(id) -- 自引用，海外课程指向上海等同课程（MVP 不实现）
 created_at    timestamptz DEFAULT now()
 ```
@@ -186,7 +186,7 @@ created_at    timestamptz DEFAULT now()
 ```sql
 id          uuid  PK
 name_en     text  NOT NULL
-is_verified boolean DEFAULT false
+is_verified boolean DEFAULT true   -- 字段为未来审核流程预留；MVP 默认 true
 ```
 
 **course_professor**（多对多中间表）
@@ -283,7 +283,7 @@ WITH CHECK (auth.uid() = user_id);
 - 匿名 ID 显示（不显示真实邮箱）
 
 ### 暂不实现（字段已预留）
-- 管理员审核后台（`role` 字段已预留）
+- 课程 / 教授审核流程（`is_verified` 字段已预留，MVP 默认 true 全部可见）
 - 课程等同性映射（`equivalent_id` 已预留）
 - 校区筛选（`sites` 表已建，`site` 字段先用字符串）
 - 评价点赞

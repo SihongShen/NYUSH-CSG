@@ -17,7 +17,7 @@ create table courses (
   category text,
   core_type text,
   department text,
-  is_verified boolean default false,
+  is_verified boolean default true,
   equivalent_id uuid references courses(id),
   created_at timestamptz default now()
 );
@@ -28,7 +28,7 @@ create table courses (
 -- core_type     text                   -- 'GPS' / 'PoH' / 'IPC' / 'WAI' / 'ED' / 'STS' / 'AT' / 'EAP'
 --                                      -- category = 'Core' 时填，否则 null
 -- department    text                   -- 'CS' / 'IMA' / 'ECON' 等，Core 课留 null
--- is_verified   boolean DEFAULT false  -- 管理员审核后改 true 才显示
+-- is_verified   boolean DEFAULT true   -- 字段为未来审核流程预留；MVP 默认 true，不在 RLS 中过滤
 -- equivalent_id uuid  FK → courses(id) -- 自引用，海外课程指向上海等同课程（MVP 不实现）
 -- created_at    timestamptz DEFAULT now()
 
@@ -38,7 +38,7 @@ create table courses (
 create table professors (
   id uuid primary key,
   name_en text not null,
-  is_verified boolean default false
+  is_verified boolean default true   -- 未来审核流程预留；MVP 默认 true
 );
 
 

@@ -136,7 +136,6 @@ export async function getReviews(courseId: string) {
 ## 已知的扩展字段（现在不实现，不要填充逻辑）
 
 - `courses.equivalent_id` — 海外课程等同映射
-- `users.role = 'admin'` — 管理员权限
 
 ## 校验规则
 
