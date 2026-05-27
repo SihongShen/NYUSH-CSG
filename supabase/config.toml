@@ -107,7 +107,8 @@ port = 54324
 # sender_name = "Admin"
 
 [storage]
-enabled = true
+# MVP 用不到文件存储，关掉。同时也绕开 M1/M2 Mac 上 storage 容器 health check 失败的 bug
+enabled = false
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
@@ -367,7 +368,8 @@ authorization_url_path = "/oauth/consent"
 allow_dynamic_registration = false
 
 [edge_runtime]
-enabled = true
+# MVP 没用 edge functions，关掉
+enabled = false
 # Supported request policies: `oneshot`, `per_worker`.
 # `per_worker` (default) — enables hot reload during local development.
 # `oneshot` — fallback mode if hot reload causes issues (e.g. in large repos or with symlinks).
@@ -381,7 +383,8 @@ deno_version = 2
 # secret_key = "env(SECRET_VALUE)"
 
 [analytics]
-enabled = true
+# 关掉，避免 vector 容器在 M1/M2 Mac 上 health check 失败
+enabled = false
 port = 54327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"

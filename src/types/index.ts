@@ -72,7 +72,7 @@ export interface CourseDetail extends Course {
 }
 
 export interface ReviewWithAuthor extends Review {
-  author_anonymous_id: string;
+  author_anonymous_id: string | null;   // null = 作者已注销，前端显示 "[已注销用户]"
   professor_name_en: string;
 }
 
