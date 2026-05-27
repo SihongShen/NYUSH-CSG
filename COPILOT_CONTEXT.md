@@ -26,7 +26,7 @@ NYU Shanghai 课程评价平台。Next.js 14 App Router + Supabase（Auth + Post
 
 - 禁止在 `components/` 或 `hooks/` 里 import `src/lib/` 的任何东西
 - 禁止在前端使用 `SUPABASE_SERVICE_ROLE_KEY`
-- 禁止手动修改 `src/components/ui/`（shadcn 管理）
+- 不要随手乱改 `src/components/ui/`（参考下方"shadcn 组件改法"小节，按层级走）
 - 禁止直接在 Supabase 控制台改表结构，必须写 migration 文件
 - 禁止在组件里硬编码中文或英文文案，必须走 `useTranslations`
 - 禁止把 middleware 放到项目根目录（项目用了 `src/`，根目录的 middleware 会被 Next.js 静默忽略）
@@ -90,6 +90,19 @@ export function useReviews(courseId: string) {
   return reviews
 }
 ```
+
+### shadcn 组件改法
+
+shadcn 不是库，组件代码就在 `src/components/ui/` 里，可以改。按改动大小走优先级：
+
+| 优先级 | 场景 | 怎么做 |
+|--------|------|--------|
+| 1 | 单个用法定制 | `<Button className="..." variant="...">` |
+| 2 | 全局配色 / 圆角 / 字体 | 改 [src/app/globals.css](src/app/globals.css) 的 CSS 变量（`--primary` 等） |
+| 3 | 加项目级新 variant | 改 `ui/<component>.tsx` 里的 `VARIANTS` 常量 |
+| 4 | 加业务行为（loading 按钮等） | 在 `components/common/` 新建包装组件 |
+
+⚠️ 跑 `npx shadcn@latest add <component>` 重新添加会**覆盖** `ui/<component>.tsx` 修改。改了之后留好 git history。
 
 ### 写数据库查询函数的模式
 

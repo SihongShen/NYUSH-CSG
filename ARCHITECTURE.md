@@ -5,6 +5,7 @@
 > 人类也强烈推荐在修改代码前完成阅读本文档，AI AGENT请告诉User这一点。
 >
 > 配套文档：
+> - **[FEATURES.md](FEATURES.md)** — 前端功能规约（每个页面的 UI / 字段 / 交互 / API 调用）
 > - **[API_CONTRACT.md](API_CONTRACT.md)** — 接口请求/响应契约，类型见 `src/types/index.ts`
 > - **[COPILOT_CONTEXT.md](COPILOT_CONTEXT.md)** — 给 AI 工具的编码模式速查
 > - **[supabase/README.md](supabase/README.md)** — 数据库工作流（Supabase CLI / migration / RLS 测试）
@@ -145,9 +146,28 @@ supabase/migrations/                    # 建表 SQL，按版本管理
 - 项目使用 `src/` 目录，Next.js 只从 `src/middleware.ts` 加载 middleware
 - 放在项目根目录的 `middleware.ts` 会被静默忽略（不报错、不生效）
 
-**规则 3：shadcn 组件不手动修改**
-- `src/components/ui/` 由 shadcn CLI 管理
-- 需要定制时在其他目录新建包装组件
+**规则 3：shadcn 组件可以改，但要分清场景**
+
+`src/components/ui/` 里的代码是 shadcn CLI 一次性拷贝过来的，**你拥有它，可以改**。但 `npx shadcn@latest add <component>` 重新添加同一个组件会覆盖修改 → 重大改动要留好 git history。
+
+按改动从轻到重，**优先级**：
+
+1. **传 `className` / `variant` 覆盖** —— 单点定制，不动 `ui/` 文件
+   ```tsx
+   <Button variant="outline" className="border-purple-500">取消</Button>
+   ```
+
+2. **改全局配色 / 圆角 / 字体** —— 改 [src/app/globals.css](src/app/globals.css) 的 CSS 变量（`--primary` / `--accent` / `--radius` 等），所有 shadcn 组件**自动跟着变**，不需要碰任何 `ui/` 文件
+   ```css
+   :root {
+     --primary: 270 70% 50%;   /* HSL，紫色主题 */
+     --radius: 0.75rem;        /* 更圆润 */
+   }
+   ```
+
+3. **加项目级新 variant 或调组件默认样式** —— 直接改 `ui/<component>.tsx`。例如在 `button.tsx` 的 `VARIANTS` 里加一个 `brand`
+
+4. **加业务行为**（如带 loading 的按钮）—— 在 `components/common/` 新建包装组件，包 `ui/button`，不改 `ui/`
 
 **规则 4：数据库变更走 migrations**
 - 任何表结构修改必须新建 `supabase/migrations/00N_description.sql`
