@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { ChevronLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CourseDetailHeader } from '@/components/course/CourseDetailHeader';
@@ -11,6 +14,22 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { useAuth } from '@/hooks/useAuth';
 import { useCourse } from '@/hooks/useCourse';
 import { useReviews } from '@/hooks/useReviews';
+
+const SIDEBAR_GRID = 'grid grid-cols-1 items-start gap-8 lg:grid-cols-[220px_1fr]';
+
+function SideNav({ children }: { children?: React.ReactNode }) {
+  return (
+    <aside className="space-y-6 lg:sticky lg:top-24">
+      <Button variant="ghost" size="sm" asChild className="w-full justify-start">
+        <Link href="/">
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          返回课程列表
+        </Link>
+      </Button>
+      {children}
+    </aside>
+  );
+}
 
 export default function CourseDetailPage({
   params
@@ -58,51 +77,88 @@ export default function CourseDetailPage({
 
   if (courseLoading) {
     return (
-      <main className="mx-auto max-w-4xl space-y-6 px-6 py-8">
-        <Skeleton className="h-40" />
-        <Skeleton className="h-32" />
+      <main className="mx-auto max-w-7xl px-6 py-8">
+        <div className={SIDEBAR_GRID}>
+          <SideNav />
+          <div className="space-y-6">
+            <Skeleton className="h-40" />
+            <Skeleton className="h-32" />
+          </div>
+        </div>
       </main>
     );
   }
 
   if (courseError || !course) {
     return (
-      <main className="mx-auto max-w-4xl px-6 py-8">
-        <EmptyState
-          title="课程不存在"
-          description="可能已删除或链接错误，请返回课程列表"
-        />
+      <main className="mx-auto max-w-7xl px-6 py-8">
+        <div className={SIDEBAR_GRID}>
+          <SideNav />
+          <div>
+            <EmptyState
+              title="课程不存在"
+              description="可能已删除或链接错误，请返回课程列表"
+            />
+          </div>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-4xl space-y-6 px-6 py-8">
-      <CourseDetailHeader course={course} />
+    <main className="mx-auto max-w-7xl px-6 py-8">
+      <div className={SIDEBAR_GRID}>
+        <SideNav>
+          <div className="space-y-3">
+            <h3 className="px-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              课程信息
+            </h3>
+            <dl className="space-y-2 px-1 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">校区</dt>
+                <dd className="font-medium">{course.home_campus}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">教授</dt>
+                <dd className="font-medium">{course.professors.length} 位</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">评价</dt>
+                <dd className="font-medium">
+                  {reviewsLoading ? '…' : `${reviews.length} 条`}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </SideNav>
+        <div className="space-y-6">
+          <CourseDetailHeader course={course} />
 
-      {writingNew && (
-        <Card className="px-5 py-4">
-          <ReviewForm
-            courseId={course.id}
+          {writingNew && (
+            <Card className="px-5 py-4">
+              <ReviewForm
+                courseId={course.id}
+                professors={course.professors}
+                onCancel={() => setWritingNew(false)}
+                onSubmitted={() => {
+                  setWritingNew(false);
+                  refreshAll();
+                }}
+              />
+            </Card>
+          )}
+
+          <ReviewList
+            reviews={reviews}
+            loading={reviewsLoading}
+            error={reviewsError}
             professors={course.professors}
-            onCancel={() => setWritingNew(false)}
-            onSubmitted={() => {
-              setWritingNew(false);
-              refreshAll();
-            }}
+            canWriteReview={!hasOwnReview && !writingNew}
+            onWriteReview={() => setWritingNew(true)}
+            onUpdated={refreshAll}
           />
-        </Card>
-      )}
-
-      <ReviewList
-        reviews={reviews}
-        loading={reviewsLoading}
-        error={reviewsError}
-        professors={course.professors}
-        canWriteReview={!hasOwnReview && !writingNew}
-        onWriteReview={() => setWritingNew(true)}
-        onUpdated={refreshAll}
-      />
+        </div>
+      </div>
     </main>
   );
 }

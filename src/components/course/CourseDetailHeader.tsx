@@ -12,13 +12,6 @@ export interface CourseDetailHeaderProps {
 export function CourseDetailHeader({ course }: CourseDetailHeaderProps) {
   return (
     <div>
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> 返回课程列表
-      </Link>
-
       <h1 className="mt-3 text-2xl leading-tight">
         <span className="font-semibold">{course.code}</span>
         <span className="ml-2 text-foreground">{course.name_en}</span>
