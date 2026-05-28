@@ -71,12 +71,12 @@ export function Navbar({ userEmail }: NavbarProps) {
 
   return (
     <header className="sticky top-0 z-40 w-full bg-nyu-violet text-nyu-violet-foreground shadow-md">
-      <div className="mx-auto grid h-20 max-w-7xl grid-cols-[1fr_minmax(0,2fr)_1fr] items-center gap-6x px-6">
+      <div className="mx-auto grid h-14 max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 md:h-20 md:grid-cols-[1fr_minmax(0,2fr)_1fr] md:gap-6 md:px-6">
         {/* 左：NYU + 校区下拉（NYU Shanghai 这种品牌呈现）*/}
         <div className="flex items-center justify-self-start gap-2">
           <Link
             href="/"
-            className="text-4xl font-extrabold tracking-tight hover:opacity-90"
+            className="text-2xl font-extrabold tracking-tight hover:opacity-90 md:text-4xl"
           >
             NYU
           </Link>
@@ -86,7 +86,7 @@ export function Navbar({ userEmail }: NavbarProps) {
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'h-auto gap-1 px-2 text-3xl font-extrabold tracking-tight',
+                  'h-auto gap-1 px-1 text-lg font-extrabold tracking-tight md:px-2 md:text-3xl',
                   ON_VIOLET_BTN
                 )}
               >

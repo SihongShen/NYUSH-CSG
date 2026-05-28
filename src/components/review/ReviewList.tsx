@@ -148,14 +148,14 @@ export function ReviewList({
         {canWriteReview && (
           <Button
             onClick={onWriteReview}
-            className="bg-nyu-violet text-nyu-violet-foreground shadow-sm hover:bg-nyu-violet/90"
+            className="w-full bg-nyu-violet text-nyu-violet-foreground shadow-sm hover:bg-nyu-violet/90 sm:w-auto"
           >
             <Plus className="mr-1 h-4 w-4" />
             写评价
           </Button>
         )}
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="flex items-center gap-3 sm:ml-auto">
           {hasProfFilter && (
             <div className="flex items-center gap-2">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">

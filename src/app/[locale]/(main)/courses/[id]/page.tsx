@@ -5,15 +5,15 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CourseDetailHeader } from '@/components/course/CourseDetailHeader';
-import { ReviewForm } from '@/components/review/ReviewForm';
 import { ReviewList } from '@/components/review/ReviewList';
+import { ReviewSubmitDialog } from '@/components/review/ReviewSubmitDialog';
 import { EmptyState } from '@/components/common/EmptyState';
 import { useAuth } from '@/hooks/useAuth';
 import { useCourse } from '@/hooks/useCourse';
 import { useReviews } from '@/hooks/useReviews';
+import type { CourseDetail } from '@/types';
 
 const SIDEBAR_GRID = 'grid grid-cols-1 items-start gap-8 lg:grid-cols-[220px_1fr]';
 
@@ -28,6 +28,40 @@ function SideNav({ children }: { children?: React.ReactNode }) {
       </Button>
       {children}
     </aside>
+  );
+}
+
+function CourseInfo({
+  course,
+  reviewsLoading,
+  reviewsCount
+}: {
+  course: CourseDetail;
+  reviewsLoading: boolean;
+  reviewsCount: number;
+}) {
+  return (
+    <div className="space-y-3">
+      <h3 className="px-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        课程信息
+      </h3>
+      <dl className="space-y-2 px-1 text-sm">
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">校区</dt>
+          <dd className="font-medium">{course.home_campus}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">教授</dt>
+          <dd className="font-medium">{course.professors.length} 位</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">评价</dt>
+          <dd className="font-medium">
+            {reviewsLoading ? '…' : `${reviewsCount} 条`}
+          </dd>
+        </div>
+      </dl>
+    </div>
   );
 }
 
@@ -52,7 +86,7 @@ export default function CourseDetailPage({
     refetch: refetchReviews
   } = useReviews(id);
 
-  const [writingNew, setWritingNew] = useState(false);
+  const [submitOpen, setSubmitOpen] = useState(false);
 
   const hasOwnReview = !!user && reviews.some((r) => r.user_id === user.id);
 
@@ -109,56 +143,49 @@ export default function CourseDetailPage({
     <main className="mx-auto max-w-7xl px-6 py-8">
       <div className={SIDEBAR_GRID}>
         <SideNav>
-          <div className="space-y-3">
-            <h3 className="px-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              课程信息
-            </h3>
-            <dl className="space-y-2 px-1 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">校区</dt>
-                <dd className="font-medium">{course.home_campus}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">教授</dt>
-                <dd className="font-medium">{course.professors.length} 位</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">评价</dt>
-                <dd className="font-medium">
-                  {reviewsLoading ? '…' : `${reviews.length} 条`}
-                </dd>
-              </div>
-            </dl>
+          {/* 桌面端：课程信息留在 sidebar */}
+          <div className="hidden lg:block">
+            <CourseInfo
+              course={course}
+              reviewsLoading={reviewsLoading}
+              reviewsCount={reviews.length}
+            />
           </div>
         </SideNav>
         <div className="space-y-6">
           <CourseDetailHeader course={course} />
 
-          {writingNew && (
-            <Card className="px-5 py-4">
-              <ReviewForm
-                courseId={course.id}
-                professors={course.professors}
-                onCancel={() => setWritingNew(false)}
-                onSubmitted={() => {
-                  setWritingNew(false);
-                  refreshAll();
-                }}
-              />
-            </Card>
-          )}
+          {/* 移动端：课程信息插在课程卡片下、写评价上 */}
+          <div className="lg:hidden">
+            <CourseInfo
+              course={course}
+              reviewsLoading={reviewsLoading}
+              reviewsCount={reviews.length}
+            />
+          </div>
 
           <ReviewList
             reviews={reviews}
             loading={reviewsLoading}
             error={reviewsError}
             professors={course.professors}
-            canWriteReview={!hasOwnReview && !writingNew}
-            onWriteReview={() => setWritingNew(true)}
+            canWriteReview={!hasOwnReview}
+            onWriteReview={() => setSubmitOpen(true)}
             onUpdated={refreshAll}
           />
         </div>
       </div>
+
+      <ReviewSubmitDialog
+        open={submitOpen}
+        onOpenChange={setSubmitOpen}
+        courseId={course.id}
+        professors={course.professors}
+        onSubmitted={() => {
+          setSubmitOpen(false);
+          refreshAll();
+        }}
+      />
     </main>
   );
 }
