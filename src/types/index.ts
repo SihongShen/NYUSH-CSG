@@ -26,16 +26,34 @@ export interface User {
   // role 字段在 DB 里有，MVP 不暴露给类型层；做 admin 时再加回来
 }
 
-export type CourseCategory = 'Core' | 'Major' | 'Elective';
-export type CoreType = 'GPS' | 'PoH' | 'IPC' | 'WAI' | 'ED' | 'STS' | 'AT' | 'EAP';
+export type CoreType =
+  | 'GPS'
+  | 'PoH'
+  | 'WAI'
+  | 'IPC'
+  | 'Chinese'
+  | 'EAP'
+  | 'Maths'
+  | 'ED'
+  | 'STS'
+  | 'AT';
+
+export type CampusCode = 'SH' | 'NY' | 'AD';
 
 export interface Course {
   id: string;
   code: string;
   name_en: string;
-  category: CourseCategory | null;
-  core_type: CoreType | null;
-  department: string | null;
+  // 主修课归属（必/选拆两列，filter 时 required ∪ elective 一起匹配）
+  major_required: string[];
+  major_elective: string[];
+  // Minor-only 项目
+  minor: string[];
+  // Core 子分类
+  core_type: CoreType[];
+  // 通识选修标记
+  is_general_elective: boolean;
+  home_campus: CampusCode;
   is_verified: boolean;
   equivalent_id: string | null;
   created_at: string;
@@ -54,9 +72,7 @@ export interface Review {
   professor_id: string;
   semester: string;         // "2024 Fall" | "2025 Spring" 等
   site: string;             // "SH" | "NY" | "AD" 等
-  rating: number;           // 1-5
-  difficulty: number;       // 1-5
-  workload: number;         // 1-5
+  // MVP 不做量化指标（rating / difficulty / workload 已删除）
   content_zh: string | null;
   content_en: string | null;
   is_visible: boolean;
@@ -88,9 +104,12 @@ export interface RegisterPayload {
 export interface CourseApplyPayload {
   code: string;
   name_en: string;
-  category?: CourseCategory;
-  core_type?: CoreType;
-  department?: string;
+  home_campus: CampusCode;
+  major_required?: string[];
+  major_elective?: string[];
+  minor?: string[];
+  core_type?: CoreType[];
+  is_general_elective?: boolean;
   professor_names: string[];
 }
 
@@ -99,18 +118,12 @@ export interface ReviewCreatePayload {
   professor_id: string;
   semester: string;
   site: string;
-  rating: number;
-  difficulty: number;
-  workload: number;
   content_zh?: string;
   content_en?: string;
 }
 
 export type ReviewUpdatePayload = Partial<
-  Pick<
-    Review,
-    'rating' | 'difficulty' | 'workload' | 'content_zh' | 'content_en'
-  >
+  Pick<Review, 'content_zh' | 'content_en'>
 >;
 
 // ============================================================================
@@ -118,11 +131,14 @@ export type ReviewUpdatePayload = Partial<
 // ============================================================================
 
 export interface CourseSearchQuery {
-  q?: string;               // 模糊匹配 code / name_en / 教授名
-  category?: CourseCategory;
-  department?: string;
-  limit?: number;           // 默认 20
-  offset?: number;          // 默认 0
+  q?: string;                       // 模糊匹配 code / name_en / 教授名
+  campus?: CampusCode;
+  majors?: string[];                // required ∪ elective 任一匹配
+  minors?: string[];
+  core_types?: CoreType[];
+  only_general_elective?: boolean;
+  limit?: number;                   // 默认 20
+  offset?: number;                  // 默认 0
 }
 
 export interface ReviewListQuery {
