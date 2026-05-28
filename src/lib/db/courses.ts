@@ -4,7 +4,9 @@ import type {
   CoreType,
   Course,
   CourseApplyPayload,
-  Paginated
+  CourseDetail,
+  Paginated,
+  Professor
 } from '@/types';
 
 /** 课程 code 重复时抛这个错，API 转 409 + existing_id */
@@ -109,6 +111,31 @@ export async function getCourses(
     limit: safeLimit,
     offset: safeOffset
   };
+}
+
+/** 拉单个课程 + 关联教授列表。 */
+export async function getCourse(id: string): Promise<CourseDetail | null> {
+  const supabase = await createClient();
+
+  const { data: course, error } = await supabase
+    .from('courses')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error || !course) return null;
+
+  const { data: cps } = await supabase
+    .from('course_professor')
+    .select('professors(id, name_en, is_verified)')
+    .eq('course_id', id);
+
+  // Supabase 嵌套 select 返回 `{ professors: {...} }`，去嵌套展平
+  const professors: Professor[] = (cps ?? [])
+    .map((row: { professors: unknown }) => row.professors as Professor | null)
+    .filter((p): p is Professor => !!p && typeof p === 'object' && 'id' in p);
+
+  return { ...(course as Course), professors };
 }
 
 /**

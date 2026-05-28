@@ -116,9 +116,10 @@ export interface CourseApplyPayload {
 
 export interface ReviewCreatePayload {
   course_id: string;
-  professor_id: string;
+  professor_id?: string;          // 二选一：选已有教授
+  new_professor_name?: string;    // 二选一：录入新教授（后端创建 + 关联到课程）
   semester: string;
-  site: string;
+  // site 不再由前端传，后端自动用 course.home_campus
   content_zh?: string;
   content_en?: string;
 }

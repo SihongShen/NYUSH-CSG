@@ -1,18 +1,18 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { ReviewWithAuthor } from '@/types';
+import type { CourseDetail } from '@/types';
 
-export interface UseReviewsReturn {
-  reviews: ReviewWithAuthor[];
+export interface UseCourseReturn {
+  course: CourseDetail | null;
   loading: boolean;
   error: string | null;
   refetch: () => void;
 }
 
-/** 拉某门课的所有评价（含当前用户的软删评价）。 */
-export function useReviews(courseId: string | null): UseReviewsReturn {
-  const [reviews, setReviews] = useState<ReviewWithAuthor[]>([]);
+/** 拉单个课程详情（含 professors 列表）。 */
+export function useCourse(id: string | null): UseCourseReturn {
+  const [course, setCourse] = useState<CourseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
@@ -20,8 +20,8 @@ export function useReviews(courseId: string | null): UseReviewsReturn {
   const refetch = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
-    if (!courseId) {
-      setReviews([]);
+    if (!id) {
+      setCourse(null);
       setLoading(false);
       return;
     }
@@ -30,14 +30,14 @@ export function useReviews(courseId: string | null): UseReviewsReturn {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/reviews?course_id=${encodeURIComponent(courseId)}`)
+    fetch(`/api/courses/${id}`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json() as Promise<{ items: ReviewWithAuthor[] }>;
+        return r.json() as Promise<CourseDetail>;
       })
       .then((data) => {
         if (!cancelled) {
-          setReviews(data.items ?? []);
+          setCourse(data);
           setLoading(false);
         }
       })
@@ -51,7 +51,7 @@ export function useReviews(courseId: string | null): UseReviewsReturn {
     return () => {
       cancelled = true;
     };
-  }, [courseId, tick]);
+  }, [id, tick]);
 
-  return { reviews, loading, error, refetch };
+  return { course, loading, error, refetch };
 }
