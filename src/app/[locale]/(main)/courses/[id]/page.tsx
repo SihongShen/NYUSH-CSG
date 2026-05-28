@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,12 +19,13 @@ import type { CourseDetail } from '@/types';
 const SIDEBAR_GRID = 'grid grid-cols-1 items-start gap-8 lg:grid-cols-[220px_1fr]';
 
 function SideNav({ children }: { children?: React.ReactNode }) {
+  const t = useTranslations('course.detail');
   return (
     <aside className="space-y-6 lg:sticky lg:top-24">
       <Button variant="ghost" size="sm" asChild className="w-full justify-start">
         <Link href="/">
           <ChevronLeft className="mr-1 h-4 w-4" />
-          返回课程列表
+          {t('backToList')}
         </Link>
       </Button>
       {children}
@@ -40,24 +42,27 @@ function CourseInfo({
   reviewsLoading: boolean;
   reviewsCount: number;
 }) {
+  const t = useTranslations('course.detail.info');
   return (
     <div className="space-y-3">
       <h3 className="px-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        课程信息
+        {t('title')}
       </h3>
       <dl className="space-y-2 px-1 text-sm">
         <div className="flex justify-between">
-          <dt className="text-muted-foreground">校区</dt>
+          <dt className="text-muted-foreground">{t('campus')}</dt>
           <dd className="font-medium">{course.home_campus}</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-muted-foreground">教授</dt>
-          <dd className="font-medium">{course.professors.length} 位</dd>
+          <dt className="text-muted-foreground">{t('professors')}</dt>
+          <dd className="font-medium">
+            {t('professorsValue', { count: course.professors.length })}
+          </dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-muted-foreground">评价</dt>
+          <dt className="text-muted-foreground">{t('reviews')}</dt>
           <dd className="font-medium">
-            {reviewsLoading ? '…' : `${reviewsCount} 条`}
+            {reviewsLoading ? '…' : t('reviewsValue', { count: reviewsCount })}
           </dd>
         </div>
       </dl>
@@ -73,6 +78,7 @@ export default function CourseDetailPage({
   const { id } = params;
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const t = useTranslations('course.detail');
   const {
     course,
     loading: courseLoading,
@@ -130,8 +136,8 @@ export default function CourseDetailPage({
           <SideNav />
           <div>
             <EmptyState
-              title="课程不存在"
-              description="可能已删除或链接错误，请返回课程列表"
+              title={t('notFoundTitle')}
+              description={t('notFoundDesc')}
             />
           </div>
         </div>

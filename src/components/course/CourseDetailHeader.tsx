@@ -1,7 +1,6 @@
 'use client';
 
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import type { CourseDetail } from '@/types';
 
@@ -10,6 +9,7 @@ export interface CourseDetailHeaderProps {
 }
 
 export function CourseDetailHeader({ course }: CourseDetailHeaderProps) {
+  const t = useTranslations('course.detail');
   return (
     <div>
       <h1 className="mt-3 text-2xl leading-tight">
@@ -38,7 +38,7 @@ export function CourseDetailHeader({ course }: CourseDetailHeaderProps) {
       {course.professors.length > 0 && (
         <p className="mt-3 text-sm">
           <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            教授：
+            {t('professorsLabel')}
           </span>
           <span className="ml-1">
             {course.professors.map((p) => p.name_en).join(' · ')}

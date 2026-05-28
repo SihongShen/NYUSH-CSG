@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Pencil, RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,9 @@ export function ReviewCard({
   course,
   editHref
 }: ReviewCardProps) {
+  const t = useTranslations('review.card');
+  const tActions = useTranslations('review.actions');
+  const tCommon = useTranslations('common');
   const [editing, setEditing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -42,11 +46,11 @@ export function ReviewCard({
     });
     setDeleting(false);
     if (res.ok) {
-      toast.success('评价已删除');
+      toast.success(tActions('deleteSuccess'));
       setDeleteOpen(false);
       onUpdated();
     } else {
-      toast.error('删除失败');
+      toast.error(tCommon('toasts.deleteFailed'));
     }
   }
 
@@ -57,10 +61,10 @@ export function ReviewCard({
       body: JSON.stringify({ is_visible: true })
     });
     if (res.ok) {
-      toast.success('已恢复');
+      toast.success(tActions('restoreSuccess'));
       onUpdated();
     } else {
-      toast.error('恢复失败');
+      toast.error(tCommon('toasts.restoreFailed'));
     }
   }
 
@@ -99,7 +103,7 @@ export function ReviewCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
           <span className="font-mono text-xs text-muted-foreground">
-            {review.author_anonymous_id ?? '[已注销]'}
+            {review.author_anonymous_id ?? t('deletedAuthor')}
           </span>
           <span className="text-muted-foreground">·</span>
           <span>{review.professor_name_en}</span>
@@ -119,7 +123,7 @@ export function ReviewCard({
                 className="h-7 gap-1 text-xs"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
-                恢复
+                {tCommon('actions.restore')}
               </Button>
             ) : (
               <>
@@ -132,7 +136,7 @@ export function ReviewCard({
                   >
                     <Link href={editHref}>
                       <Pencil className="h-3.5 w-3.5" />
-                      编辑
+                      {tCommon('actions.edit')}
                     </Link>
                   </Button>
                 ) : (
@@ -143,7 +147,7 @@ export function ReviewCard({
                     className="h-7 gap-1 text-xs"
                   >
                     <Pencil className="h-3.5 w-3.5" />
-                    编辑
+                    {tCommon('actions.edit')}
                   </Button>
                 )}
                 <Button
@@ -153,7 +157,7 @@ export function ReviewCard({
                   className="h-7 gap-1 text-xs text-destructive hover:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  删除
+                  {tCommon('actions.delete')}
                 </Button>
               </>
             )}
@@ -162,9 +166,7 @@ export function ReviewCard({
       </div>
 
       {deleted && (
-        <p className="mt-2 text-xs text-destructive">
-          已删除（仅你自己能看到）
-        </p>
+        <p className="mt-2 text-xs text-destructive">{t('deletedStatus')}</p>
       )}
 
       <div className="mt-3 space-y-2 text-sm">
@@ -186,9 +188,9 @@ export function ReviewCard({
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title="确认删除评价？"
-        description="软删后只有你能看到，可以随时恢复。"
-        confirmLabel="删除"
+        title={t('confirmDeleteTitle')}
+        description={t('confirmDeleteDesc')}
+        confirmLabel={tCommon('actions.delete')}
         variant="destructive"
         loading={deleting}
         onConfirm={handleDelete}

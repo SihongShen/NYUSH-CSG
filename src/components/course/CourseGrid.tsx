@@ -1,6 +1,7 @@
 'use client';
 
 import { BookOpen, AlertCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/common/EmptyState';
 import { CourseCard } from './CourseCard';
@@ -13,6 +14,8 @@ export interface CourseGridProps {
 }
 
 export function CourseGrid({ courses, loading, error }: CourseGridProps) {
+  const t = useTranslations('course.list');
+
   if (loading && !courses) {
     return (
       <div className="space-y-3">
@@ -27,8 +30,8 @@ export function CourseGrid({ courses, loading, error }: CourseGridProps) {
     return (
       <EmptyState
         icon={<AlertCircle className="h-10 w-10" />}
-        title="加载失败"
-        description="网络或服务器出错了，刷新页面重试。"
+        title={t('loadFailedTitle')}
+        description={t('loadFailedDesc')}
       />
     );
   }
@@ -37,8 +40,8 @@ export function CourseGrid({ courses, loading, error }: CourseGridProps) {
     return (
       <EmptyState
         icon={<BookOpen className="h-10 w-10" />}
-        title="没找到课程"
-        description="试试调整筛选条件，或换个搜索关键词。"
+        title={t('emptyTitle')}
+        description={t('emptyDesc')}
       />
     );
   }

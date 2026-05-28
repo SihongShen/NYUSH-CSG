@@ -1,6 +1,6 @@
 'use client';
 
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
@@ -12,6 +12,7 @@ export function LocaleSwitcher({ className }: LocaleSwitcherProps) {
   const router = useRouter();
   const pathname = usePathname();
   const locale = useLocale();
+  const t = useTranslations('locale');
 
   const other = locale === 'zh' ? 'en' : 'zh';
 
@@ -26,7 +27,7 @@ export function LocaleSwitcher({ className }: LocaleSwitcherProps) {
       size="sm"
       onClick={switchLocale}
       className={className}
-      aria-label={`切换到${other === 'zh' ? '中文' : 'English'}`}
+      aria-label={other === 'zh' ? t('switchToZh') : t('switchToEn')}
     >
       {locale === 'zh' ? 'EN' : '中'}
     </Button>

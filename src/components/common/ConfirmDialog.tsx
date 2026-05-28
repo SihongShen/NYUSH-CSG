@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +17,9 @@ export interface ConfirmDialogProps {
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: React.ReactNode;
+  /** 默认 t('common.actions.confirm') */
   confirmLabel?: string;
+  /** 默认 t('common.actions.cancel') */
   cancelLabel?: string;
   variant?: 'default' | 'destructive';
   loading?: boolean;
@@ -28,12 +31,15 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = '确认',
-  cancelLabel = '取消',
+  confirmLabel,
+  cancelLabel,
   variant = 'default',
   loading = false,
   onConfirm
 }: ConfirmDialogProps) {
+  const tCommon = useTranslations('common');
+  const confirm = confirmLabel ?? tCommon('actions.confirm');
+  const cancel = cancelLabel ?? tCommon('actions.cancel');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -47,14 +53,14 @@ export function ConfirmDialog({
             onClick={() => onOpenChange(false)}
             disabled={loading}
           >
-            {cancelLabel}
+            {cancel}
           </Button>
           <LoadingButton
             variant={variant}
             loading={loading}
             onClick={() => void onConfirm()}
           >
-            {confirmLabel}
+            {confirm}
           </LoadingButton>
         </DialogFooter>
       </DialogContent>

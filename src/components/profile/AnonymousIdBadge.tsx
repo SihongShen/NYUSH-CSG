@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -12,16 +13,18 @@ export interface AnonymousIdBadgeProps {
 }
 
 export function AnonymousIdBadge({ anonymousId, showCopy = true }: AnonymousIdBadgeProps) {
+  const t = useTranslations('anonymousId');
+  const tCommon = useTranslations('common');
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(anonymousId);
       setCopied(true);
-      toast.success('已复制');
+      toast.success(tCommon('toasts.copied'));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error('复制失败，请手动选中');
+      toast.error(tCommon('toasts.copyFailed'));
     }
   }
 
@@ -36,7 +39,7 @@ export function AnonymousIdBadge({ anonymousId, showCopy = true }: AnonymousIdBa
           size="sm"
           className="h-7 w-7 p-0"
           onClick={handleCopy}
-          aria-label="复制匿名 ID"
+          aria-label={t('copyAria')}
           type="button"
         >
           {copied ? (

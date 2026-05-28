@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/utils/cn';
@@ -19,6 +20,7 @@ export interface BackToTopProps {
  * 用法：放在 layout 里即可全站启用。
  */
 export function BackToTop({ showAfter = 300, className }: BackToTopProps) {
+  const t = useTranslations('backToTop');
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export function BackToTop({ showAfter = 300, className }: BackToTopProps) {
           type="button"
           onClick={scrollToTop}
           size="icon"
-          aria-label="回到顶部"
+          aria-label={t('ariaLabel')}
           aria-hidden={!visible}
           tabIndex={visible ? 0 : -1}
           className={cn(

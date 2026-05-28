@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -30,14 +31,13 @@ export function ReviewSubmitDialog({
   professors,
   onSubmitted
 }: ReviewSubmitDialogProps) {
+  const t = useTranslations('review.submit');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>写评价</DialogTitle>
-          <DialogDescription>
-            选教授 + 学期，写下你的真实感受（中英任填其一）。
-          </DialogDescription>
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
         {/* 长表单时给个内部滚动，避免在小屏顶到边 */}
         <div className="-mx-3 max-h-[65vh] overflow-y-auto px-3">

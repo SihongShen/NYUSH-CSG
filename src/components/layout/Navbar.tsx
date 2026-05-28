@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   Check,
   ChevronDown,
@@ -46,19 +47,20 @@ export function Navbar({ userEmail }: NavbarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { campus, setCampus } = useCampus();
+  const t = useTranslations('nav');
   // 初始从 URL 读 ?q=xxx，方便分享链接 / 刷新保持
   const [query, setQuery] = useState(() => searchParams.get('q') ?? '');
-  const netid = userEmail?.split('@')[0] ?? '用户';
+  const netid = userEmail?.split('@')[0] ?? t('userFallback');
   const campusName = CAMPUSES.find((c) => c.code === campus)?.name ?? '';
 
   async function handleSignOut() {
     const supabase = createClient();
     const { error } = await supabase.auth.signOut();
     if (error) {
-      toast.error('退出失败，请重试');
+      toast.error(t('toasts.logoutFailed'));
       return;
     }
-    toast.success('已退出登录');
+    toast.success(t('toasts.loggedOut'));
     router.replace('/login');
     router.refresh();
   }
@@ -96,7 +98,7 @@ export function Navbar({ userEmail }: NavbarProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-44">
               <DropdownMenuLabel className="text-xs text-muted-foreground">
-                切换校区
+                {t('campus.switch')}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               {CAMPUSES.map((c) => (
@@ -125,9 +127,9 @@ export function Navbar({ userEmail }: NavbarProps) {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="搜索课程编号 / 名称 / 教授..."
+              placeholder={t('search.placeholder')}
               className="border-white/20 bg-white/10 pl-9 text-white placeholder:text-white/60 focus-visible:border-white/40 focus-visible:bg-white/15 focus-visible:ring-white/40 focus-visible:ring-offset-0"
-              aria-label="搜索课程"
+              aria-label={t('search.ariaLabel')}
             />
           </div>
         </form>
@@ -151,7 +153,9 @@ export function Navbar({ userEmail }: NavbarProps) {
               {userEmail && (
                 <>
                   <DropdownMenuLabel className="font-normal">
-                    <div className="text-xs text-muted-foreground">登录为</div>
+                    <div className="text-xs text-muted-foreground">
+                      {t('loggedInAs')}
+                    </div>
                     <div className="truncate font-medium">{userEmail}</div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -160,7 +164,7 @@ export function Navbar({ userEmail }: NavbarProps) {
               <DropdownMenuItem asChild>
                 <Link href="/profile">
                   <UserCircle className="mr-2 h-4 w-4" />
-                  前往个人中心
+                  {t('menu.profile')}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -169,7 +173,7 @@ export function Navbar({ userEmail }: NavbarProps) {
                 className="text-destructive focus:text-destructive"
               >
                 <LogOut className="mr-2 h-4 w-4" />
-                退出登录
+                {t('menu.logout')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

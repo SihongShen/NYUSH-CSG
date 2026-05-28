@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { ChevronLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
@@ -27,11 +28,12 @@ import type { ReviewWithCourse } from '@/types';
 
 type SortKey = 'newest' | 'oldest' | 'semester-desc' | 'semester-asc';
 
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: 'newest', label: '最新发布' },
-  { value: 'oldest', label: '最早发布' },
-  { value: 'semester-desc', label: '学期由新到旧' },
-  { value: 'semester-asc', label: '学期由旧到新' }
+// label 在组件内通过 t('review.list.sortOptions.<key>') 翻译；这里只保留 i18n 键映射
+const SORT_OPTIONS: { value: SortKey; i18nKey: string }[] = [
+  { value: 'newest', i18nKey: 'newest' },
+  { value: 'oldest', i18nKey: 'oldest' },
+  { value: 'semester-desc', i18nKey: 'semesterDesc' },
+  { value: 'semester-asc', i18nKey: 'semesterAsc' }
 ];
 
 const SEASON_ORDER: Record<string, number> = {
@@ -84,6 +86,10 @@ export default function ProfilePage() {
     refetch
   } = useMyReviews();
 
+  const t = useTranslations('profile');
+  const tCommon = useTranslations('common');
+  const tReviewList = useTranslations('review.list');
+
   const [sort, setSort] = useState<SortKey>('newest');
   const [showDeleted, setShowDeleted] = useState(true);
 
@@ -104,23 +110,27 @@ export default function ProfilePage() {
           <Button variant="ghost" size="sm" asChild className="w-full justify-start">
             <Link href="/">
               <ChevronLeft className="mr-1 h-4 w-4" />
-              回首页
+              {t('backHome')}
             </Link>
           </Button>
 
           {!reviewsLoading && reviews.length > 0 && (
             <div className="space-y-3">
               <h3 className="px-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                统计
+                {t('stats.title')}
               </h3>
               <dl className="space-y-2 px-1 text-sm">
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">已评价</dt>
-                  <dd className="font-medium">{coursesCount} 门</dd>
+                  <dt className="text-muted-foreground">{t('stats.reviewed')}</dt>
+                  <dd className="font-medium">
+                    {t('stats.reviewedValue', { count: coursesCount })}
+                  </dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">涉及教授</dt>
-                  <dd className="font-medium">{professorsCount} 位</dd>
+                  <dt className="text-muted-foreground">{t('stats.professors')}</dt>
+                  <dd className="font-medium">
+                    {t('stats.professorsValue', { count: professorsCount })}
+                  </dd>
                 </div>
               </dl>
             </div>
@@ -128,28 +138,36 @@ export default function ProfilePage() {
         </aside>
 
         <div className="space-y-6">
-          <h1 className="text-3xl font-semibold tracking-tight">个人中心</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">{t('title')}</h1>
 
           {/* ─── 顶部：邮箱 + 匿名 ID ─── */}
-          <section className="space-y-2 text-sm">
-            <div className="flex items-center gap-3">
-              <span className="w-16 shrink-0 text-muted-foreground">邮箱</span>
-              {meLoading ? (
-                <Skeleton className="h-5 w-48" />
-              ) : (
-                <span className="font-medium">{me?.email ?? '—'}</span>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="w-16 shrink-0 text-muted-foreground">匿名 ID</span>
-              {meLoading ? (
-                <Skeleton className="h-6 w-32" />
-              ) : me?.anonymous_id ? (
-                <AnonymousIdBadge anonymousId={me.anonymous_id} />
-              ) : (
-                <span className="text-destructive">无法获取</span>
-              )}
-            </div>
+          <section className="text-sm">
+            <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2">
+              <dt className="whitespace-nowrap text-muted-foreground">
+                {t('fields.email')}
+              </dt>
+              <dd>
+                {meLoading ? (
+                  <Skeleton className="h-5 w-48" />
+                ) : (
+                  <span className="font-medium">{me?.email ?? '—'}</span>
+                )}
+              </dd>
+              <dt className="whitespace-nowrap text-muted-foreground">
+                {t('fields.anonymousId')}
+              </dt>
+              <dd>
+                {meLoading ? (
+                  <Skeleton className="h-6 w-32" />
+                ) : me?.anonymous_id ? (
+                  <AnonymousIdBadge anonymousId={me.anonymous_id} />
+                ) : (
+                  <span className="text-destructive">
+                    {t('fields.cannotFetch')}
+                  </span>
+                )}
+              </dd>
+            </dl>
           </section>
 
           <Separator />
@@ -157,7 +175,7 @@ export default function ProfilePage() {
           {/* ─── 我的评价 ─── */}
           <section className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-xl font-semibold">我的评价</h2>
+              <h2 className="text-xl font-semibold">{t('reviews.title')}</h2>
 
               {reviews.length > 0 && (
                 <div className="ml-auto flex flex-wrap items-center gap-4">
@@ -166,11 +184,11 @@ export default function ProfilePage() {
                       checked={showDeleted}
                       onCheckedChange={(v) => setShowDeleted(v === true)}
                     />
-                    显示已删除
+                    {t('reviews.showDeleted')}
                   </label>
                   <div className="flex items-center gap-2">
                     <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                      排序
+                      {tReviewList('sort')}
                     </span>
                     <Select
                       value={sort}
@@ -182,7 +200,7 @@ export default function ProfilePage() {
                       <SelectContent align="end">
                         {SORT_OPTIONS.map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
+                            {tReviewList(`sortOptions.${opt.i18nKey}`)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -199,16 +217,19 @@ export default function ProfilePage() {
                 ))}
               </div>
             ) : reviewsError ? (
-              <EmptyState title="评价加载失败" description="刷新页面重试" />
+              <EmptyState
+                title={tReviewList('loadFailedTitle')}
+                description={tCommon('toasts.refreshToRetry')}
+              />
             ) : reviews.length === 0 ? (
               <EmptyState
-                title="还没写过评价"
-                description="去课程列表挑一门写下你的感受吧"
+                title={t('reviews.emptyTitle')}
+                description={t('reviews.emptyDesc')}
               />
             ) : processed.length === 0 ? (
               <EmptyState
-                title="没有可显示的评价"
-                description='勾选"显示已删除"看回所有评价'
+                title={t('reviews.filteredEmptyTitle')}
+                description={t('reviews.filteredEmptyDesc')}
               />
             ) : (
               <div className="space-y-3">

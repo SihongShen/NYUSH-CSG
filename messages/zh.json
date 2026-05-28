@@ -1,4 +1,33 @@
 {
+  "common": {
+    "actions": {
+      "cancel": "取消",
+      "submit": "提交",
+      "save": "保存",
+      "edit": "编辑",
+      "delete": "删除",
+      "restore": "恢复",
+      "confirm": "确认",
+      "back": "返回",
+      "search": "搜索",
+      "expand": "展开",
+      "collapse": "收起"
+    },
+    "states": {
+      "loading": "加载中...",
+      "submitting": "提交中...",
+      "updating": "更新中..."
+    },
+    "toasts": {
+      "validateForm": "请检查表单",
+      "loginRequired": "需要登录",
+      "copied": "已复制",
+      "copyFailed": "复制失败，请手动选中",
+      "deleteFailed": "删除失败",
+      "restoreFailed": "恢复失败",
+      "refreshToRetry": "刷新页面重试"
+    }
+  },
   "auth": {
     "title": "NYUSH 课程评价",
     "subtitle": "登录后即可浏览和发布课程评价",
@@ -34,6 +63,208 @@
     },
     "messages": {
       "registerSuccess": "注册成功，请前往邮箱完成验证后再登录"
+    }
+  },
+  "nav": {
+    "userFallback": "用户",
+    "loggedInAs": "登录为",
+    "menu": {
+      "profile": "前往个人中心",
+      "logout": "退出登录"
+    },
+    "toasts": {
+      "logoutFailed": "退出失败，请重试",
+      "loggedOut": "已退出登录"
+    },
+    "campus": {
+      "switch": "切换校区"
+    },
+    "search": {
+      "placeholder": "搜索课程编号 / 名称 / 教授...",
+      "ariaLabel": "搜索课程"
+    }
+  },
+  "locale": {
+    "switchToZh": "切换到中文",
+    "switchToEn": "切换到 English"
+  },
+  "home": {
+    "title": "课程列表",
+    "addCourse": "添加课程",
+    "matched": "匹配 {total} 门",
+    "total": "共 {total} 门",
+    "showingFirst": "显示前 {showing}",
+    "filterToggle": "筛选"
+  },
+  "course": {
+    "card": {
+      "reviewCount": "{count} 评价",
+      "noReviews": "暂无评价"
+    },
+    "list": {
+      "loadFailedTitle": "加载失败",
+      "loadFailedDesc": "网络或服务器出错了，刷新页面重试。",
+      "emptyTitle": "没找到课程",
+      "emptyDesc": "试试调整筛选条件，或换个搜索关键词。"
+    },
+    "detail": {
+      "backToList": "返回课程列表",
+      "professorsLabel": "教授：",
+      "info": {
+        "title": "课程信息",
+        "campus": "校区",
+        "professors": "教授",
+        "reviews": "评价",
+        "professorsValue": "{count} 位",
+        "reviewsValue": "{count} 条"
+      },
+      "notFoundTitle": "课程不存在",
+      "notFoundDesc": "可能已删除或链接错误，请返回课程列表"
+    },
+    "submit": {
+      "title": "添加课程",
+      "description": "填写课程基本信息和分类。提交后会跳到详情页。",
+      "fields": {
+        "code": "课程编号 *",
+        "codePlaceholder": "如 CSCI-SHU 101",
+        "nameEn": "课程名（英文）*",
+        "nameEnPlaceholder": "Introduction to Computer Science",
+        "campus": "校区",
+        "campusHint": "添加其他校区的课请先在 Topbar 切换",
+        "classification": "课程分类（至少选一项）",
+        "lectureProf": "Lecture 教授 *",
+        "lectureProfPlaceholder": "如 Smith",
+        "chipHint": "输入名字按 Enter / Tab / 逗号添加",
+        "recitationTA": "Recitation TA（可选）",
+        "recitationTAPlaceholder": "如 Liu"
+      },
+      "validation": {
+        "codeRequired": "课程编号不能为空",
+        "nameTooShort": "课程名至少 3 个字符",
+        "classificationRequired": "至少需要选择一个分类（含 General Elective）",
+        "lectureProfRequired": "至少需要 1 个 Lecture 教授"
+      },
+      "buttons": {
+        "submit": "提交课程"
+      },
+      "toasts": {
+        "success": "课程已添加",
+        "duplicate": "这个课程编号已存在",
+        "viewExisting": "查看已有",
+        "submitGenericError": "提交失败：请检查所有字段",
+        "submitFailedRetry": "提交失败，请稍后重试"
+      }
+    }
+  },
+  "review": {
+    "card": {
+      "deletedAuthor": "[已注销]",
+      "deletedStatus": "已删除（仅你自己能看到）",
+      "confirmDeleteTitle": "确认删除评价？",
+      "confirmDeleteDesc": "软删后只有你能看到，可以随时恢复。"
+    },
+    "list": {
+      "writeReview": "写评价",
+      "professorFilter": "教授",
+      "allProfessors": "所有教授",
+      "sort": "排序",
+      "sortOptions": {
+        "newest": "最新发布",
+        "oldest": "最早发布",
+        "semesterDesc": "学期由新到旧",
+        "semesterAsc": "学期由旧到新"
+      },
+      "sections": {
+        "mine": "我的评价",
+        "others": "其他评价"
+      },
+      "loadFailedTitle": "评价加载失败",
+      "emptyWithFilterTitle": "没有这位教授的评价",
+      "emptyWithFilterDesc": "切到「所有教授」看其他人的评价",
+      "emptyTitle": "还没有评价",
+      "emptyDescCanWrite": "点上方\"写评价\"成为第一个分享的人",
+      "emptyDescCantWrite": "等其他人来分享"
+    },
+    "form": {
+      "professor": "教授 *",
+      "newProfOption": "+ 添加新教授",
+      "noProfHint": "这门课还没有教授记录，请填写下方",
+      "newProfPlaceholder": "新教授名",
+      "year": "年份 *",
+      "semester": "学期 *",
+      "zhLabel": "中文评价",
+      "enLabel": "English Review",
+      "zhPlaceholder": "可选",
+      "enPlaceholder": "Optional",
+      "buttons": {
+        "update": "更新"
+      },
+      "validation": {
+        "newProfRequired": "请填写新教授名",
+        "professorRequired": "请选择教授",
+        "contentRequired": "中文和英文评价至少填一个"
+      },
+      "toasts": {
+        "submitted": "评价已提交",
+        "updated": "评价已更新",
+        "duplicate": "已经为这个教授 + 学期组合写过评价",
+        "submitFailed": "提交失败",
+        "updateFailed": "更新失败"
+      }
+    },
+    "submit": {
+      "title": "写评价",
+      "description": "选教授 + 学期，写下你的真实感受（中英任填其一）。"
+    },
+    "actions": {
+      "deleteSuccess": "评价已删除",
+      "restoreSuccess": "已恢复"
+    }
+  },
+  "profile": {
+    "title": "个人中心",
+    "backHome": "回首页",
+    "fields": {
+      "email": "邮箱",
+      "anonymousId": "匿名 ID",
+      "cannotFetch": "无法获取"
+    },
+    "stats": {
+      "title": "统计",
+      "reviewed": "已评价",
+      "professors": "涉及教授",
+      "reviewedValue": "{count} 门",
+      "professorsValue": "{count} 位"
+    },
+    "reviews": {
+      "title": "我的评价",
+      "showDeleted": "显示已删除",
+      "emptyTitle": "还没写过评价",
+      "emptyDesc": "去课程列表挑一门写下你的感受吧",
+      "filteredEmptyTitle": "没有可显示的评价",
+      "filteredEmptyDesc": "勾选\"显示已删除\"看回所有评价"
+    }
+  },
+  "anonymousId": {
+    "copyAria": "复制匿名 ID"
+  },
+  "chipInput": {
+    "removeAria": "移除 {chip}"
+  },
+  "backToTop": {
+    "ariaLabel": "回到顶部"
+  },
+  "error": {
+    "notFound": {
+      "title": "页面不存在",
+      "description": "你要找的页面可能已删除、链接错误或暂时不可用。",
+      "backHome": "回首页"
+    },
+    "server": {
+      "title": "出错了",
+      "description": "服务器或前端出了点问题，刷新看看，或者稍后再试。",
+      "retry": "重新加载",
+      "backHome": "回首页"
     }
   }
 }

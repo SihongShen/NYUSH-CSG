@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, SlidersHorizontal } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { useCampus } from '@/components/providers/CampusProvider';
 import { useCourses } from '@/hooks/useCourses';
@@ -19,6 +20,8 @@ import { cn } from '@/utils/cn';
 export default function HomePage() {
   const { campus } = useCampus();
   const { get, getArray } = useUrlState();
+  const t = useTranslations('home');
+  const tCommon = useTranslations('common');
   const [submitOpen, setSubmitOpen] = useState(false);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
@@ -54,7 +57,7 @@ export default function HomePage() {
   return (
     <main className="mx-auto max-w-7xl px-6 py-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">课程列表</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
         <div className="flex items-center gap-3">
           <Button
             size="sm"
@@ -62,12 +65,13 @@ export default function HomePage() {
             className="bg-nyu-violet text-nyu-violet-foreground shadow-sm hover:bg-nyu-violet/90 focus-visible:ring-nyu-violet/40"
           >
             <Plus className="mr-1 h-4 w-4" />
-            添加课程
+            {t('addCourse')}
           </Button>
           {!loading && data && (
             <span className="whitespace-nowrap text-sm text-muted-foreground">
-              {hasFilter ? `匹配 ${total} 门` : `共 ${total} 门`}
-              {total > showingCount && ` · 显示前 ${showingCount}`}
+              {hasFilter ? t('matched', { total }) : t('total', { total })}
+              {total > showingCount &&
+                ` · ${t('showingFirst', { showing: showingCount })}`}
             </span>
           )}
         </div>
@@ -86,7 +90,7 @@ export default function HomePage() {
           >
             <span className="flex items-center gap-2">
               <SlidersHorizontal className="h-4 w-4" />
-              筛选
+              {t('filterToggle')}
               {activeFilterCount > 0 && (
                 <span className="rounded bg-nyu-violet px-1.5 py-0.5 text-xs text-nyu-violet-foreground">
                   {activeFilterCount}
@@ -94,7 +98,9 @@ export default function HomePage() {
               )}
             </span>
             <span className="text-xs text-muted-foreground">
-              {mobileFilterOpen ? '收起' : '展开'}
+              {mobileFilterOpen
+                ? tCommon('actions.collapse')
+                : tCommon('actions.expand')}
             </span>
           </Button>
           {/* 桌面端始终显示；移动端跟随 mobileFilterOpen */}

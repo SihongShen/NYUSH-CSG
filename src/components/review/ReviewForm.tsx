@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,8 @@ export function ReviewForm({
   onCancel,
   onSubmitted
 }: ReviewFormProps) {
+  const t = useTranslations('review.form');
+  const tCommon = useTranslations('common');
   const isEdit = !!initialReview;
 
   const [profValue, setProfValue] = useState<string>(
@@ -60,13 +63,13 @@ export function ReviewForm({
     const errs: Record<string, string> = {};
     if (!isEdit) {
       if (useNewProf && !newProfName.trim()) {
-        errs.professor = '请填写新教授名';
+        errs.professor = t('validation.newProfRequired');
       } else if (!useNewProf && !profValue) {
-        errs.professor = '请选择教授';
+        errs.professor = t('validation.professorRequired');
       }
     }
     if (!contentZh.trim() && !contentEn.trim()) {
-      errs.content = '中文和英文评价至少填一个';
+      errs.content = t('validation.contentRequired');
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -90,17 +93,17 @@ export function ReviewForm({
       setSubmitting(false);
 
       if (res.ok) {
-        toast.success('评价已更新');
+        toast.success(t('toasts.updated'));
         onSubmitted();
         return;
       }
       if (res.status === 400) {
         const data = (await res.json()) as { fields?: Record<string, string> };
         if (data.fields) setErrors(data.fields);
-        toast.error('请检查表单');
+        toast.error(tCommon('toasts.validateForm'));
         return;
       }
-      toast.error('更新失败');
+      toast.error(t('toasts.updateFailed'));
       return;
     }
 
@@ -125,21 +128,21 @@ export function ReviewForm({
     setSubmitting(false);
 
     if (res.ok) {
-      toast.success('评价已提交');
+      toast.success(t('toasts.submitted'));
       onSubmitted();
       return;
     }
     if (res.status === 409) {
-      toast.error('已经为这个教授 + 学期组合写过评价');
+      toast.error(t('toasts.duplicate'));
       return;
     }
     if (res.status === 400) {
       const data = (await res.json()) as { fields?: Record<string, string> };
       if (data.fields) setErrors(data.fields);
-      toast.error('请检查表单');
+      toast.error(tCommon('toasts.validateForm'));
       return;
     }
-    toast.error('提交失败');
+    toast.error(t('toasts.submitFailed'));
   }
 
   return (
@@ -147,7 +150,7 @@ export function ReviewForm({
       {!isEdit && (
         <>
           <div className="space-y-1.5">
-            <Label>教授 *</Label>
+            <Label>{t('professor')}</Label>
             {professors.length > 0 ? (
               <Select value={profValue} onValueChange={setProfValue}>
                 <SelectTrigger className="h-9">
@@ -159,19 +162,17 @@ export function ReviewForm({
                       {p.name_en}
                     </SelectItem>
                   ))}
-                  <SelectItem value={NEW_PROF}>+ 添加新教授</SelectItem>
+                  <SelectItem value={NEW_PROF}>{t('newProfOption')}</SelectItem>
                 </SelectContent>
               </Select>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                这门课还没有教授记录，请填写下方
-              </p>
+              <p className="text-xs text-muted-foreground">{t('noProfHint')}</p>
             )}
             {useNewProf && (
               <Input
                 value={newProfName}
                 onChange={(e) => setNewProfName(e.target.value)}
-                placeholder="新教授名"
+                placeholder={t('newProfPlaceholder')}
                 disabled={submitting}
                 className="mt-2 h-9"
               />
@@ -183,7 +184,7 @@ export function ReviewForm({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>年份 *</Label>
+              <Label>{t('year')}</Label>
               <Select
                 value={String(year)}
                 onValueChange={(v) => setYear(parseInt(v, 10))}
@@ -202,7 +203,7 @@ export function ReviewForm({
             </div>
 
             <div className="space-y-1.5">
-              <Label>学期 *</Label>
+              <Label>{t('semester')}</Label>
               <Select
                 value={season}
                 onValueChange={(v) => setSeason(v as Season)}
@@ -224,24 +225,24 @@ export function ReviewForm({
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor="zh">中文评价</Label>
+        <Label htmlFor="zh">{t('zhLabel')}</Label>
         <Textarea
           id="zh"
           value={contentZh}
           onChange={(e) => setContentZh(e.target.value)}
-          placeholder="可选"
+          placeholder={t('zhPlaceholder')}
           disabled={submitting}
           rows={4}
         />
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="en">English Review</Label>
+        <Label htmlFor="en">{t('enLabel')}</Label>
         <Textarea
           id="en"
           value={contentEn}
           onChange={(e) => setContentEn(e.target.value)}
-          placeholder="Optional"
+          placeholder={t('enPlaceholder')}
           disabled={submitting}
           rows={4}
         />
@@ -258,15 +259,17 @@ export function ReviewForm({
           onClick={onCancel}
           disabled={submitting}
         >
-          取消
+          {tCommon('actions.cancel')}
         </Button>
         <LoadingButton
           type="submit"
           loading={submitting}
-          loadingText={isEdit ? '更新中...' : '提交中...'}
+          loadingText={
+            isEdit ? tCommon('states.updating') : tCommon('states.submitting')
+          }
           className="bg-nyu-violet text-nyu-violet-foreground hover:bg-nyu-violet/90"
         >
-          {isEdit ? '更新' : '提交'}
+          {isEdit ? t('buttons.update') : tCommon('actions.submit')}
         </LoadingButton>
       </div>
     </form>

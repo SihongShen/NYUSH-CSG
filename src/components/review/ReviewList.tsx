@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,11 +24,12 @@ import type { Professor, ReviewWithAuthor } from '@/types';
 
 type SortKey = 'newest' | 'oldest' | 'semester-desc' | 'semester-asc';
 
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: 'newest', label: '最新发布' },
-  { value: 'oldest', label: '最早发布' },
-  { value: 'semester-desc', label: '学期由新到旧' },
-  { value: 'semester-asc', label: '学期由旧到新' }
+// label 在组件内通过 t('sortOptions.<key>') 翻译
+const SORT_OPTIONS: { value: SortKey; i18nKey: string }[] = [
+  { value: 'newest', i18nKey: 'newest' },
+  { value: 'oldest', i18nKey: 'oldest' },
+  { value: 'semester-desc', i18nKey: 'semesterDesc' },
+  { value: 'semester-asc', i18nKey: 'semesterAsc' }
 ];
 
 const SEASON_ORDER: Record<string, number> = {
@@ -98,6 +100,8 @@ export function ReviewList({
   onUpdated
 }: ReviewListProps) {
   const { user } = useAuth();
+  const t = useTranslations('review.list');
+  const tCommon = useTranslations('common');
   const [profValue, setProfValue] = useState<string>(ALL_PROFS);
   const [sort, setSort] = useState<SortKey>('newest');
 
@@ -135,7 +139,12 @@ export function ReviewList({
   }
 
   if (error) {
-    return <EmptyState title="评价加载失败" description="刷新页面重试" />;
+    return (
+      <EmptyState
+        title={t('loadFailedTitle')}
+        description={tCommon('toasts.refreshToRetry')}
+      />
+    );
   }
 
   const hasProfFilter = professors.length >= 2;
@@ -151,7 +160,7 @@ export function ReviewList({
             className="w-full bg-nyu-violet text-nyu-violet-foreground shadow-sm hover:bg-nyu-violet/90 sm:w-auto"
           >
             <Plus className="mr-1 h-4 w-4" />
-            写评价
+            {t('writeReview')}
           </Button>
         )}
 
@@ -159,14 +168,14 @@ export function ReviewList({
           {hasProfFilter && (
             <div className="flex items-center gap-2">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                教授
+                {t('professorFilter')}
               </span>
               <Select value={profValue} onValueChange={setProfValue}>
                 <SelectTrigger className="h-8 w-auto gap-2 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent align="end">
-                  <SelectItem value={ALL_PROFS}>所有教授</SelectItem>
+                  <SelectItem value={ALL_PROFS}>{t('allProfessors')}</SelectItem>
                   {professors.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name_en}
@@ -179,7 +188,7 @@ export function ReviewList({
 
           <div className="flex items-center gap-2">
             <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              排序
+              {t('sort')}
             </span>
             <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
               <SelectTrigger className="h-8 w-auto gap-2 text-sm">
@@ -188,7 +197,7 @@ export function ReviewList({
               <SelectContent align="end">
                 {SORT_OPTIONS.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {t(`sortOptions.${opt.i18nKey}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -200,13 +209,13 @@ export function ReviewList({
       {/* ─── 列表 ─── */}
       {processed.length === 0 ? (
         <EmptyState
-          title={profFiltered ? '没有这位教授的评价' : '还没有评价'}
+          title={profFiltered ? t('emptyWithFilterTitle') : t('emptyTitle')}
           description={
             profFiltered
-              ? '切到「所有教授」看其他人的评价'
+              ? t('emptyWithFilterDesc')
               : canWriteReview
-                ? '点上方"写评价"成为第一个分享的人'
-                : '等其他人来分享'
+                ? t('emptyDescCanWrite')
+                : t('emptyDescCantWrite')
           }
         />
       ) : (
@@ -214,7 +223,7 @@ export function ReviewList({
           {mine.length > 0 && (
             <div id="my-reviews" className="scroll-mt-24">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                我的评价
+                {t('sections.mine')}
               </h3>
               <div className="space-y-3">
                 {mine.map((r) => (
@@ -235,7 +244,7 @@ export function ReviewList({
             <div>
               {mine.length > 0 && (
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  其他评价
+                  {t('sections.others')}
                 </h3>
               )}
               <div className="space-y-3">

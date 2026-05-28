@@ -1,4 +1,33 @@
 {
+  "common": {
+    "actions": {
+      "cancel": "Cancel",
+      "submit": "Submit",
+      "save": "Save",
+      "edit": "Edit",
+      "delete": "Delete",
+      "restore": "Restore",
+      "confirm": "Confirm",
+      "back": "Back",
+      "search": "Search",
+      "expand": "Expand",
+      "collapse": "Collapse"
+    },
+    "states": {
+      "loading": "Loading...",
+      "submitting": "Submitting...",
+      "updating": "Updating..."
+    },
+    "toasts": {
+      "validateForm": "Please check the form",
+      "loginRequired": "Sign-in required",
+      "copied": "Copied",
+      "copyFailed": "Copy failed, please select manually",
+      "deleteFailed": "Delete failed",
+      "restoreFailed": "Restore failed",
+      "refreshToRetry": "Refresh the page to retry"
+    }
+  },
   "auth": {
     "title": "NYUSH Course Reviews",
     "subtitle": "Sign in to browse and post course reviews",
@@ -34,6 +63,208 @@
     },
     "messages": {
       "registerSuccess": "Registered. Check your inbox to verify, then sign in."
+    }
+  },
+  "nav": {
+    "userFallback": "User",
+    "loggedInAs": "Signed in as",
+    "menu": {
+      "profile": "Go to profile",
+      "logout": "Sign out"
+    },
+    "toasts": {
+      "logoutFailed": "Sign-out failed, please try again",
+      "loggedOut": "Signed out"
+    },
+    "campus": {
+      "switch": "Switch campus"
+    },
+    "search": {
+      "placeholder": "Search by code / name / professor...",
+      "ariaLabel": "Search courses"
+    }
+  },
+  "locale": {
+    "switchToZh": "Switch to 中文",
+    "switchToEn": "Switch to English"
+  },
+  "home": {
+    "title": "Courses",
+    "addCourse": "Add course",
+    "matched": "{total} matched",
+    "total": "{total} total",
+    "showingFirst": "showing first {showing}",
+    "filterToggle": "Filters"
+  },
+  "course": {
+    "card": {
+      "reviewCount": "{count} reviews",
+      "noReviews": "No reviews yet"
+    },
+    "list": {
+      "loadFailedTitle": "Failed to load",
+      "loadFailedDesc": "Network or server error. Please refresh the page.",
+      "emptyTitle": "No courses found",
+      "emptyDesc": "Try adjusting filters or a different search keyword."
+    },
+    "detail": {
+      "backToList": "Back to courses",
+      "professorsLabel": "Professors:",
+      "info": {
+        "title": "Course info",
+        "campus": "Campus",
+        "professors": "Professors",
+        "reviews": "Reviews",
+        "professorsValue": "{count}",
+        "reviewsValue": "{count}"
+      },
+      "notFoundTitle": "Course not found",
+      "notFoundDesc": "It may have been removed or the link is wrong. Please go back to the course list."
+    },
+    "submit": {
+      "title": "Add a course",
+      "description": "Fill in the basics and classification. You'll be taken to the detail page after submission.",
+      "fields": {
+        "code": "Course code *",
+        "codePlaceholder": "e.g. CSCI-SHU 101",
+        "nameEn": "Course name (English) *",
+        "nameEnPlaceholder": "Introduction to Computer Science",
+        "campus": "Campus",
+        "campusHint": "To add a course for another campus, switch campus in the topbar first.",
+        "classification": "Classification (select at least one)",
+        "lectureProf": "Lecture professor(s) *",
+        "lectureProfPlaceholder": "e.g. Smith",
+        "chipHint": "Type a name and press Enter / Tab / comma to add",
+        "recitationTA": "Recitation TA (optional)",
+        "recitationTAPlaceholder": "e.g. Liu"
+      },
+      "validation": {
+        "codeRequired": "Course code is required",
+        "nameTooShort": "Course name must be at least 3 characters",
+        "classificationRequired": "Select at least one classification (including General Elective)",
+        "lectureProfRequired": "At least 1 lecture professor is required"
+      },
+      "buttons": {
+        "submit": "Submit course"
+      },
+      "toasts": {
+        "success": "Course added",
+        "duplicate": "This course code already exists",
+        "viewExisting": "View existing",
+        "submitGenericError": "Submission failed: please review all fields",
+        "submitFailedRetry": "Submission failed, please try again later"
+      }
+    }
+  },
+  "review": {
+    "card": {
+      "deletedAuthor": "[deleted]",
+      "deletedStatus": "Deleted (only visible to you)",
+      "confirmDeleteTitle": "Delete this review?",
+      "confirmDeleteDesc": "Soft delete — only you will see it, and you can restore anytime."
+    },
+    "list": {
+      "writeReview": "Write a review",
+      "professorFilter": "Professor",
+      "allProfessors": "All professors",
+      "sort": "Sort",
+      "sortOptions": {
+        "newest": "Newest",
+        "oldest": "Oldest",
+        "semesterDesc": "Semester (newest first)",
+        "semesterAsc": "Semester (oldest first)"
+      },
+      "sections": {
+        "mine": "Your review",
+        "others": "Other reviews"
+      },
+      "loadFailedTitle": "Failed to load reviews",
+      "emptyWithFilterTitle": "No reviews for this professor",
+      "emptyWithFilterDesc": "Switch to \"All professors\" to see others",
+      "emptyTitle": "No reviews yet",
+      "emptyDescCanWrite": "Tap \"Write a review\" above to be the first.",
+      "emptyDescCantWrite": "Waiting for others to share."
+    },
+    "form": {
+      "professor": "Professor *",
+      "newProfOption": "+ Add new professor",
+      "noProfHint": "This course has no professors yet — fill in below.",
+      "newProfPlaceholder": "New professor name",
+      "year": "Year *",
+      "semester": "Semester *",
+      "zhLabel": "中文评价",
+      "enLabel": "English Review",
+      "zhPlaceholder": "可选",
+      "enPlaceholder": "Optional",
+      "buttons": {
+        "update": "Update"
+      },
+      "validation": {
+        "newProfRequired": "Please enter the new professor name",
+        "professorRequired": "Please select a professor",
+        "contentRequired": "Please fill in at least one of Chinese or English content"
+      },
+      "toasts": {
+        "submitted": "Review submitted",
+        "updated": "Review updated",
+        "duplicate": "You've already reviewed this professor + semester combination",
+        "submitFailed": "Submission failed",
+        "updateFailed": "Update failed"
+      }
+    },
+    "submit": {
+      "title": "Write a review",
+      "description": "Select professor and semester, then share your honest thoughts (zh or en is fine)."
+    },
+    "actions": {
+      "deleteSuccess": "Review deleted",
+      "restoreSuccess": "Restored"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "backHome": "Back home",
+    "fields": {
+      "email": "Email",
+      "anonymousId": "Anonymous ID",
+      "cannotFetch": "Unavailable"
+    },
+    "stats": {
+      "title": "Stats",
+      "reviewed": "Courses reviewed",
+      "professors": "Professors covered",
+      "reviewedValue": "{count}",
+      "professorsValue": "{count}"
+    },
+    "reviews": {
+      "title": "Your reviews",
+      "showDeleted": "Show deleted",
+      "emptyTitle": "No reviews yet",
+      "emptyDesc": "Pick a course from the list and share your thoughts.",
+      "filteredEmptyTitle": "Nothing to show",
+      "filteredEmptyDesc": "Check \"Show deleted\" to see all your reviews"
+    }
+  },
+  "anonymousId": {
+    "copyAria": "Copy anonymous ID"
+  },
+  "chipInput": {
+    "removeAria": "Remove {chip}"
+  },
+  "backToTop": {
+    "ariaLabel": "Back to top"
+  },
+  "error": {
+    "notFound": {
+      "title": "Page not found",
+      "description": "The page you're looking for may have been removed, the link is wrong, or it's temporarily unavailable.",
+      "backHome": "Back home"
+    },
+    "server": {
+      "title": "Something went wrong",
+      "description": "Either the server or the frontend hit an error. Please refresh, or try again later.",
+      "retry": "Reload",
+      "backHome": "Back home"
     }
   }
 }

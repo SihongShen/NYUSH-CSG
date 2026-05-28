@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Course } from '@/types';
@@ -10,6 +11,7 @@ export interface CourseCardProps {
 }
 
 export function CourseCard({ course, reviewCount = 0 }: CourseCardProps) {
+  const t = useTranslations('course.card');
   return (
     <Link
       href={`/courses/${course.id}`}
@@ -23,7 +25,9 @@ export function CourseCard({ course, reviewCount = 0 }: CourseCardProps) {
             <span className="ml-8 text-foreground">{course.name_en}</span>
           </h3>
           <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
-            {reviewCount > 0 ? `${reviewCount} 评价` : '暂无评价'}
+            {reviewCount > 0
+              ? t('reviewCount', { count: reviewCount })
+              : t('noReviews')}
           </span>
         </div>
 

@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { ChevronDown } from 'lucide-react';
 import {
@@ -45,6 +46,8 @@ export function CourseSubmitDialog({
 }: CourseSubmitDialogProps) {
   const router = useRouter();
   const { campus } = useCampus();
+  const t = useTranslations('course.submit');
+  const tCommon = useTranslations('common');
 
   const [code, setCode] = useState('');
   const [nameEn, setNameEn] = useState('');
@@ -78,8 +81,8 @@ export function CourseSubmitDialog({
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
-    if (!code.trim()) errs.code = '课程编号不能为空';
-    if (nameEn.trim().length < 3) errs.name_en = '课程名至少 3 个字符';
+    if (!code.trim()) errs.code = t('validation.codeRequired');
+    if (nameEn.trim().length < 3) errs.name_en = t('validation.nameTooShort');
     if (
       majorRequired.length === 0 &&
       majorElective.length === 0 &&
@@ -87,10 +90,10 @@ export function CourseSubmitDialog({
       coreType.length === 0 &&
       !isGE
     ) {
-      errs.classification = '至少需要选择一个分类（含 General Elective）';
+      errs.classification = t('validation.classificationRequired');
     }
     if (lectureProfs.length === 0) {
-      errs.lecture_professors = '至少需要 1 个 Lecture 教授';
+      errs.lecture_professors = t('validation.lectureProfRequired');
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -121,7 +124,7 @@ export function CourseSubmitDialog({
 
     if (res.status === 201) {
       const { id } = (await res.json()) as { id: string };
-      toast.success('课程已添加');
+      toast.success(t('toasts.success'));
       handleOpenChange(false);
       router.push(`/courses/${id}`);
       return;
@@ -129,9 +132,9 @@ export function CourseSubmitDialog({
 
     if (res.status === 409) {
       const data = (await res.json()) as { existing_id: string };
-      toast.error('这个课程编号已存在', {
+      toast.error(t('toasts.duplicate'), {
         action: {
-          label: '查看已有',
+          label: t('toasts.viewExisting'),
           onClick: () => {
             onOpenChange(false);
             router.push(`/courses/${data.existing_id}`);
@@ -146,29 +149,27 @@ export function CourseSubmitDialog({
       const data = (await res.json()) as { fields?: Record<string, string> };
       if (data.fields) {
         setErrors(data.fields);
-        toast.error('请检查表单');
+        toast.error(tCommon('toasts.validateForm'));
       } else {
-        toast.error('提交失败：请检查所有字段');
+        toast.error(t('toasts.submitGenericError'));
       }
       return;
     }
 
     if (res.status === 401) {
-      toast.error('需要登录');
+      toast.error(tCommon('toasts.loginRequired'));
       return;
     }
 
-    toast.error('提交失败，请稍后重试');
+    toast.error(t('toasts.submitFailedRetry'));
   }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>添加课程</DialogTitle>
-          <DialogDescription>
-            填写课程基本信息和分类。提交后会跳到详情页。
-          </DialogDescription>
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -176,42 +177,46 @@ export function CourseSubmitDialog({
           <div className="-mx-3 max-h-[60vh] space-y-5 overflow-y-auto px-3">
             {/* ─────────── 基本信息 ─────────── */}
             <Section>
-              <Field id="code" label="课程编号 *" error={errors.code}>
+              <Field id="code" label={t('fields.code')} error={errors.code}>
                 <Input
                   id="code"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  placeholder="如 CSCI-SHU 101"
+                  placeholder={t('fields.codePlaceholder')}
                   disabled={submitting}
                   className="h-9"
                 />
               </Field>
 
-              <Field id="name-en" label="课程名（英文）*" error={errors.name_en}>
+              <Field
+                id="name-en"
+                label={t('fields.nameEn')}
+                error={errors.name_en}
+              >
                 <Input
                   id="name-en"
                   value={nameEn}
                   onChange={(e) => setNameEn(e.target.value)}
-                  placeholder="Introduction to Computer Science"
+                  placeholder={t('fields.nameEnPlaceholder')}
                   disabled={submitting}
                   className="h-9"
                 />
               </Field>
 
               <div className="space-y-1.5">
-                <Label>校区</Label>
+                <Label>{t('fields.campus')}</Label>
                 <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm">
                   {CAMPUS_NAMES[campus]}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  添加其他校区的课请先在 Topbar 切换
+                  {t('fields.campusHint')}
                 </p>
               </div>
             </Section>
 
             {/* ─────────── 课程分类 ─────────── */}
             <Section>
-              <Label>课程分类（至少选一项）</Label>
+              <Label>{t('fields.classification')}</Label>
               <div className="space-y-2">
                 <CollapsibleCheckList
                   title="Major Required"
@@ -254,25 +259,25 @@ export function CourseSubmitDialog({
             <Section>
               <Field
                 id="lecture"
-                label="Lecture 教授 *"
+                label={t('fields.lectureProf')}
                 error={errors.lecture_professors}
-                hint="输入名字按 Enter / Tab / 逗号添加"
+                hint={t('fields.chipHint')}
               >
                 <ChipInput
                   id="lecture"
                   value={lectureProfs}
                   onChange={setLectureProfs}
-                  placeholder="如 Smith"
+                  placeholder={t('fields.lectureProfPlaceholder')}
                   disabled={submitting}
                 />
               </Field>
 
-              <Field id="reci" label="Recitation TA（可选）">
+              <Field id="reci" label={t('fields.recitationTA')}>
                 <ChipInput
                   id="reci"
                   value={recitationTAs}
                   onChange={setRecitationTAs}
-                  placeholder="如 Liu"
+                  placeholder={t('fields.recitationTAPlaceholder')}
                   disabled={submitting}
                 />
               </Field>
@@ -286,15 +291,15 @@ export function CourseSubmitDialog({
               onClick={() => handleOpenChange(false)}
               disabled={submitting}
             >
-              取消
+              {tCommon('actions.cancel')}
             </Button>
             <LoadingButton
               type="submit"
               loading={submitting}
-              loadingText="提交中..."
+              loadingText={tCommon('states.submitting')}
               className="bg-nyu-violet text-nyu-violet-foreground hover:bg-nyu-violet/90"
             >
-              提交课程
+              {t('buttons.submit')}
             </LoadingButton>
           </DialogFooter>
         </form>

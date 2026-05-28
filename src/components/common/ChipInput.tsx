@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, type KeyboardEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/utils/cn';
@@ -32,6 +33,7 @@ export function ChipInput({
   disabled,
   className
 }: ChipInputProps) {
+  const t = useTranslations('chipInput');
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -82,7 +84,7 @@ export function ChipInput({
               e.stopPropagation();
               removeAt(i);
             }}
-            aria-label={`移除 ${chip}`}
+            aria-label={t('removeAria', { chip })}
             className="ml-0.5 rounded-sm transition-colors hover:bg-muted-foreground/20"
           >
             <X className="h-3 w-3" />
