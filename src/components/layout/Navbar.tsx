@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Check,
   ChevronDown,
@@ -22,17 +22,17 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/utils/cn';
+import { useCampus } from '@/components/providers/CampusProvider';
 import { createClient } from '@/utils/supabase-browser';
+import type { CampusCode } from '@/types';
 import { LocaleSwitcher } from './LocaleSwitcher';
 
-// 校区选项 —— MVP 阶段先 3 个学位校区
-const CAMPUSES = [
+// 校区显示名映射 —— code 列表跟 types/index.ts 的 CampusCode 一致
+const CAMPUSES: { code: CampusCode; name: string }[] = [
   { code: 'SH', name: 'Shanghai' },
   { code: 'NY', name: 'New York' },
   { code: 'AD', name: 'Abu Dhabi' }
-] as const;
-
-type CampusCode = (typeof CAMPUSES)[number]['code'];
+];
 
 const ON_VIOLET_BTN =
   'text-white hover:bg-white/15 hover:text-white focus-visible:ring-white/40';
@@ -43,8 +43,10 @@ export interface NavbarProps {
 
 export function Navbar({ userEmail }: NavbarProps) {
   const router = useRouter();
-  const [campus, setCampus] = useState<CampusCode>('SH');
-  const [query, setQuery] = useState('');
+  const searchParams = useSearchParams();
+  const { campus, setCampus } = useCampus();
+  // 初始从 URL 读 ?q=xxx，方便分享链接 / 刷新保持
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '');
   const netid = userEmail?.split('@')[0] ?? '用户';
   const campusName = CAMPUSES.find((c) => c.code === campus)?.name ?? '';
 
