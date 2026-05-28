@@ -1,5 +1,19 @@
 import { createClient } from './supabase';
-import type { CampusCode, CoreType, Course, Paginated } from '@/types';
+import type {
+  CampusCode,
+  CoreType,
+  Course,
+  CourseApplyPayload,
+  Paginated
+} from '@/types';
+
+/** 课程 code 重复时抛这个错，API 转 409 + existing_id */
+export class DuplicateCourseCodeError extends Error {
+  constructor(public existingId: string) {
+    super('duplicate_code');
+    this.name = 'DuplicateCourseCodeError';
+  }
+}
 
 export interface GetCoursesParams {
   campus?: CampusCode;
@@ -95,4 +109,84 @@ export async function getCourses(
     limit: safeLimit,
     offset: safeOffset
   };
+}
+
+/**
+ * 添加课程：
+ *   1. 检查 code 是否已存在（同校区）→ 抛 DuplicateCourseCodeError
+ *   2. 插入 course
+ *   3. find-or-create 每个教授（lecture + reci 合并去重），建立 course_professor 关联
+ *
+ * MVP 不做事务回滚；步骤 2 之后失败 = 课程已建但教授关联不全，可由后续编辑补充。
+ */
+export async function createCourse(
+  payload: CourseApplyPayload
+): Promise<{ id: string }> {
+  const supabase = await createClient();
+
+  // 1. 检查同校区 + 同 code 是否已存在
+  const { data: existing } = await supabase
+    .from('courses')
+    .select('id')
+    .eq('home_campus', payload.home_campus)
+    .eq('code', payload.code)
+    .maybeSingle();
+
+  if (existing) {
+    throw new DuplicateCourseCodeError(existing.id);
+  }
+
+  // 2. 插入 course（schema 没设 default 所以 JS 生成 uuid）
+  const courseId = crypto.randomUUID();
+  const { error: insertCourseErr } = await supabase.from('courses').insert({
+    id: courseId,
+    code: payload.code,
+    name_en: payload.name_en,
+    home_campus: payload.home_campus,
+    major_required: payload.major_required,
+    major_elective: payload.major_elective,
+    minor: payload.minor,
+    core_type: payload.core_type,
+    is_general_elective: payload.is_general_elective
+  });
+  if (insertCourseErr) throw insertCourseErr;
+
+  // 3. find-or-create 每个教授；lecture 和 reci 合并去重
+  const allProfs = Array.from(
+    new Set(
+      [...payload.lecture_professors, ...payload.recitation_tas]
+        .map((n) => n.trim())
+        .filter(Boolean)
+    )
+  );
+
+  for (const name of allProfs) {
+    let profId: string;
+
+    const { data: existingProf } = await supabase
+      .from('professors')
+      .select('id')
+      .eq('name_en', name)
+      .maybeSingle();
+
+    if (existingProf) {
+      profId = existingProf.id;
+    } else {
+      profId = crypto.randomUUID();
+      const { error: profErr } = await supabase
+        .from('professors')
+        .insert({ id: profId, name_en: name });
+      if (profErr) throw profErr;
+    }
+
+    // 关联表，重复（uniq PK）忽略
+    await supabase
+      .from('course_professor')
+      .upsert(
+        { course_id: courseId, professor_id: profId },
+        { onConflict: 'course_id,professor_id', ignoreDuplicates: true }
+      );
+  }
+
+  return { id: courseId };
 }

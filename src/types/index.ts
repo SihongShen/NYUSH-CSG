@@ -105,12 +105,13 @@ export interface CourseApplyPayload {
   code: string;
   name_en: string;
   home_campus: CampusCode;
-  major_required?: string[];
-  major_elective?: string[];
-  minor?: string[];
-  core_type?: CoreType[];
-  is_general_elective?: boolean;
-  professor_names: string[];
+  major_required: string[];
+  major_elective: string[];
+  minor: string[];
+  core_type: CoreType[];
+  is_general_elective: boolean;
+  lecture_professors: string[];     // 至少 1 个，前端校验
+  recitation_tas: string[];         // 可选；后端合并存入 professors
 }
 
 export interface ReviewCreatePayload {

@@ -19,8 +19,8 @@ export function CourseCard({ course, reviewCount = 0 }: CourseCardProps) {
         {/* 顶行：code + name 横排，右侧评价数 */}
         <div className="flex items-baseline justify-between gap-3">
           <h3 className="min-w-0 text-base leading-snug">
-            <span className="font-semibold">{course.code}</span>{' '}
-            <span className="text-foreground">{course.name_en}</span>
+            <span className="font-semibold">{course.code}</span>
+            <span className="ml-8 text-foreground">{course.name_en}</span>
           </h3>
           <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
             {reviewCount > 0 ? `${reviewCount} 评价` : '暂无评价'}

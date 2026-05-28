@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCampus } from '@/components/providers/CampusProvider';
@@ -8,6 +8,7 @@ import { useCourses } from '@/hooks/useCourses';
 import { useUrlState } from '@/hooks/useUrlState';
 import { CourseFilterPanel } from '@/components/course/CourseFilterPanel';
 import { CourseGrid } from '@/components/course/CourseGrid';
+import { CourseSubmitDialog } from '@/components/course/CourseSubmitDialog';
 import {
   isValidCoreType,
   isValidMajor,
@@ -17,6 +18,7 @@ import {
 export default function HomePage() {
   const { campus } = useCampus();
   const { get, getArray } = useUrlState();
+  const [submitOpen, setSubmitOpen] = useState(false);
 
   const q = get('q');
   const majors = getArray('major').filter(isValidMajor);
@@ -49,13 +51,11 @@ export default function HomePage() {
         <div className="flex items-center gap-3">
           <Button
             size="sm"
-            asChild
-            className="bg-nyu-violet text-nyu-violet-foreground hover:bg-nyu-violet/90 focus-visible:ring-nyu-violet/40 shadow-sm"
+            onClick={() => setSubmitOpen(true)}
+            className="bg-nyu-violet text-nyu-violet-foreground shadow-sm hover:bg-nyu-violet/90 focus-visible:ring-nyu-violet/40"
           >
-            <Link href="/courses/new">
-              <Plus className="mr-1 h-4 w-4" />
-              添加课程
-            </Link>
+            <Plus className="mr-1 h-4 w-4" />
+            添加课程
           </Button>
           {!loading && data && (
             <span className="whitespace-nowrap text-sm text-muted-foreground">
@@ -74,6 +74,8 @@ export default function HomePage() {
           error={error}
         />
       </div>
+
+      <CourseSubmitDialog open={submitOpen} onOpenChange={setSubmitOpen} />
     </main>
   );
 }
