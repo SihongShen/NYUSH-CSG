@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Pencil, RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -14,12 +15,19 @@ export interface ReviewCardProps {
   review: ReviewWithAuthor;
   isOwnReview: boolean;
   onUpdated: () => void;
+  /** 可选：在卡片顶部额外展示一行课程信息（profile 页用） */
+  course?: { id: string; code: string; name_en: string };
+  /** 可选：给了就让"编辑"变成跳转链接（profile 页跳回课程详情）。
+   *  没给则保持原地切到 ReviewForm 的行为（课程详情页用）。 */
+  editHref?: string;
 }
 
 export function ReviewCard({
   review,
   isOwnReview,
-  onUpdated
+  onUpdated,
+  course,
+  editHref
 }: ReviewCardProps) {
   const [editing, setEditing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -76,6 +84,18 @@ export function ReviewCard({
 
   return (
     <Card className={cn('px-5 py-4', deleted && 'opacity-60')}>
+      {course && (
+        <div className="mb-2 flex flex-wrap items-baseline gap-x-2 text-sm">
+          <Link
+            href={`/courses/${course.id}`}
+            className="font-mono font-semibold text-foreground hover:underline"
+          >
+            {course.code}
+          </Link>
+          <span className="text-muted-foreground">{course.name_en}</span>
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
           <span className="font-mono text-xs text-muted-foreground">
@@ -103,15 +123,29 @@ export function ReviewCard({
               </Button>
             ) : (
               <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setEditing(true)}
-                  className="h-7 gap-1 text-xs"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  编辑
-                </Button>
+                {editHref ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    asChild
+                    className="h-7 gap-1 text-xs"
+                  >
+                    <Link href={editHref}>
+                      <Pencil className="h-3.5 w-3.5" />
+                      编辑
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditing(true)}
+                    className="h-7 gap-1 text-xs"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    编辑
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"

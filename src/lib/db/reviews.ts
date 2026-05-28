@@ -2,7 +2,8 @@ import { createClient } from './supabase';
 import type {
   ReviewCreatePayload,
   ReviewUpdatePayload,
-  ReviewWithAuthor
+  ReviewWithAuthor,
+  ReviewWithCourse
 } from '@/types';
 
 /**
@@ -62,6 +63,58 @@ export async function listReviewsForCourse(
       created_at: row.created_at as string,
       author_anonymous_id: userId ? anonMap.get(userId) ?? null : null,
       professor_name_en: prof?.name_en ?? ''
+    };
+  });
+}
+
+/**
+ * 当前用户自己的所有评价（含软删），按时间倒序。
+ * 同时 join 课程基本信息（code / name_en）让 profile 页能显示是哪门课。
+ *
+ * 调用前已由 API 层用 requireUser() 鉴权，所以这里直接 trust userId。
+ */
+export async function listReviewsForUser(
+  userId: string
+): Promise<ReviewWithCourse[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*, professors(id, name_en), courses(id, code, name_en)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  if (!data) return [];
+
+  // 自己看自己，author_anonymous_id 单独取一次（所有 review 都是同一个 user_id）
+  let anonymousId: string | null = null;
+  const { data: anon } = await supabase.rpc('get_anonymous_id', {
+    p_user_id: userId
+  });
+  anonymousId = (anon as string | null) ?? null;
+
+  return data.map((r) => {
+    const row = r as Record<string, unknown>;
+    const prof = row.professors as { name_en?: string } | null;
+    const course = row.courses as
+      | { code?: string; name_en?: string }
+      | null;
+    return {
+      id: row.id as string,
+      user_id: row.user_id as string,
+      course_id: row.course_id as string,
+      professor_id: row.professor_id as string,
+      semester: row.semester as string,
+      site: row.site as string,
+      content_zh: (row.content_zh as string | null) ?? null,
+      content_en: (row.content_en as string | null) ?? null,
+      is_visible: row.is_visible as boolean,
+      created_at: row.created_at as string,
+      author_anonymous_id: anonymousId,
+      professor_name_en: prof?.name_en ?? '',
+      course_code: course?.code ?? '',
+      course_name_en: course?.name_en ?? ''
     };
   });
 }

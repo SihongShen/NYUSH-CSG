@@ -8,7 +8,8 @@ import {
   ChevronDown,
   LogOut,
   Search,
-  User as UserIcon
+  User as UserIcon,
+  UserCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -131,11 +132,8 @@ export function Navbar({ userEmail }: NavbarProps) {
           </div>
         </form>
 
-        {/* 右：我的评价 / 语言 / 用户菜单 */}
+        {/* 右：语言 / 用户菜单 */}
         <nav className="flex items-center justify-self-end gap-1">
-          <Button variant="ghost" size="sm" asChild className={ON_VIOLET_BTN}>
-            <Link href="/profile">我的评价</Link>
-          </Button>
           <LocaleSwitcher className={ON_VIOLET_BTN} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -159,6 +157,13 @@ export function Navbar({ userEmail }: NavbarProps) {
                   <DropdownMenuSeparator />
                 </>
               )}
+              <DropdownMenuItem asChild>
+                <Link href="/profile">
+                  <UserCircle className="mr-2 h-4 w-4" />
+                  前往个人中心
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleSignOut}
                 className="text-destructive focus:text-destructive"

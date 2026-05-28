@@ -1,19 +1,39 @@
 import { NextResponse } from 'next/server';
 import {
   createReview,
-  listReviewsForCourse
+  listReviewsForCourse,
+  listReviewsForUser
 } from '@/lib/db/reviews';
-import { requireUser } from '@/lib/auth/session';
+import { getUser, requireUser } from '@/lib/auth/session';
 import { isValidSemester } from '@/lib/constants/semesters';
 
 // ============================================================================
-// GET /api/reviews?course_id=...
+// GET /api/reviews
+//   ?course_id=...   一门课的所有评价（公开，RLS 控制可见性）
+//   ?user_id=me      当前登录用户的所有评价（含软删，需登录）
 // ============================================================================
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const courseId = searchParams.get('course_id');
+  const userIdParam = searchParams.get('user_id');
 
+  // 分支 1：拉自己的评价
+  if (userIdParam === 'me') {
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    }
+    try {
+      const items = await listReviewsForUser(user.id);
+      return NextResponse.json({ items });
+    } catch (error) {
+      console.error('GET /api/reviews?user_id=me error', error);
+      return NextResponse.json({ error: 'internal' }, { status: 500 });
+    }
+  }
+
+  // 分支 2：拉一门课的评价
   if (!courseId) {
     return NextResponse.json(
       { error: 'course_id_required' },

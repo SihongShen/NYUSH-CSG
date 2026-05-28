@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CourseDetailHeader } from '@/components/course/CourseDetailHeader';
@@ -17,6 +18,7 @@ export default function CourseDetailPage({
   params: { id: string; locale: string };
 }) {
   const { id } = params;
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const {
     course,
@@ -34,6 +36,20 @@ export default function CourseDetailPage({
   const [writingNew, setWritingNew] = useState(false);
 
   const hasOwnReview = !!user && reviews.some((r) => r.user_id === user.id);
+
+  // ?focus=review → 评价加载完后滚动到「我的评价」区块（profile 页跳过来用）
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    if (focusedRef.current) return;
+    if (searchParams.get('focus') !== 'review') return;
+    if (reviewsLoading) return;
+    if (!hasOwnReview) return;
+    const el = document.getElementById('my-reviews');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      focusedRef.current = true;
+    }
+  }, [searchParams, reviewsLoading, hasOwnReview]);
 
   function refreshAll() {
     refetchCourse();

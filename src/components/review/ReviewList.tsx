@@ -212,7 +212,7 @@ export function ReviewList({
       ) : (
         <>
           {mine.length > 0 && (
-            <div>
+            <div id="my-reviews" className="scroll-mt-24">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 我的评价
               </h3>

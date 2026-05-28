@@ -92,6 +92,12 @@ export interface ReviewWithAuthor extends Review {
   professor_name_en: string;
 }
 
+// profile 页用：评价 + 课程基本信息（让用户能看出是哪门课的评价）
+export interface ReviewWithCourse extends ReviewWithAuthor {
+  course_code: string;
+  course_name_en: string;
+}
+
 // ============================================================================
 // Request payloads (POST / PATCH body 形状)
 // ============================================================================
