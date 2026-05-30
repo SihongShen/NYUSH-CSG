@@ -43,9 +43,21 @@ export async function middleware(request: NextRequest) {
       }
     }
   });
-  const { data: { user } } = await supabase.auth.getUser();
+  let user = null;
+  let authReachable = true;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    user = data.user;
+    // 5xx / 无 status = 网络或服务端不可达；4xx (JWT expired 等) 才是真"未登录"
+    if (error && (!error.status || error.status >= 500)) {
+      authReachable = false;
+    }
+  } catch {
+    authReachable = false;
+  }
 
-  if (!user && !isPublicPath(request.nextUrl.pathname)) {
+  // auth 不可达时放行 —— 让下游 hook 自己报错，避免把 DB 故障误判成"用户被登出"
+  if (authReachable && !user && !isPublicPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
