@@ -1,7 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
+import { formatProfessorName } from '@/utils/format';
 import type { CourseDetail } from '@/types';
 
 export interface CourseDetailHeaderProps {
@@ -41,7 +43,31 @@ export function CourseDetailHeader({ course }: CourseDetailHeaderProps) {
             {t('professorsLabel')}
           </span>
           <span className="ml-1">
-            {course.professors.map((p) => p.name_en).join(' · ')}
+            {course.professors
+              .map((p) => formatProfessorName(p.name_en))
+              .join(' · ')}
+          </span>
+        </p>
+      )}
+
+      {course.equivalents.length > 0 && (
+        <p className="mt-2 text-sm">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t('equivalentsLabel')}
+          </span>
+          <span className="ml-1 inline-flex flex-wrap gap-x-2">
+            {course.equivalents.map((eq) => (
+              <Link
+                key={eq.id}
+                href={`/courses/${eq.id}`}
+                className="font-mono hover:underline"
+              >
+                {eq.code}
+                <span className="ml-1 text-xs text-muted-foreground">
+                  ({eq.home_campus})
+                </span>
+              </Link>
+            ))}
           </span>
         </p>
       )}

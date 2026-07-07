@@ -72,6 +72,7 @@
     "matched": "匹配 {total} 门",
     "total": "共 {total} 门",
     "showingFirst": "显示前 {showing}",
+    "loadMore": "加载更多（还有 {remaining} 门）",
     "filterToggle": "筛选"
   },
   "course": {
@@ -88,6 +89,7 @@
     "detail": {
       "backToList": "返回课程列表",
       "professorsLabel": "教授：",
+      "equivalentsLabel": "等同课程：",
       "info": {
         "title": "课程信息",
         "campus": "校区",
@@ -109,6 +111,9 @@
         "nameEnPlaceholder": "Introduction to Computer Science",
         "campus": "校区",
         "campusHint": "添加其他校区的课请先在 Topbar 切换",
+        "shEquivalent": "上海等同课课号（可选）",
+        "shEquivalentHint": "如 CSCI-SHU 210。库里有这门上海课就直接关联；没有会自动建一门同名的上海课并关联",
+        "shEquivalentPlaceholder": "CSCI-SHU 210",
         "classification": "课程分类（至少选一项）",
         "lectureProf": "Lecture 教授 *",
         "lectureProfPlaceholder": "如 Smith",
@@ -138,6 +143,9 @@
     "card": {
       "deletedAuthor": "[已注销]",
       "deletedStatus": "已删除（仅你自己能看到）",
+      "upvote": "有帮助",
+      "downvote": "没帮助",
+      "voteFailed": "投票失败，请重试",
       "confirmDeleteTitle": "确认删除评价？",
       "confirmDeleteDesc": "软删后只有你能看到，可以随时恢复。"
     },
@@ -167,6 +175,7 @@
       "professor": "教授 *",
       "newProfOption": "+ 添加新教授",
       "noProfHint": "这门课还没有教授记录，请填写下方",
+      "siteFollowsCampus": "评价将标记为在 {site} 上的课（跟随右上角校区切换）",
       "newProfPlaceholder": "新教授名",
       "year": "年份 *",
       "semester": "学期 *",
@@ -186,6 +195,7 @@
         "submitted": "评价已提交",
         "updated": "评价已更新",
         "duplicate": "已经为这个教授 + 学期组合写过评价",
+        "rateLimited": "提交太频繁，请一小时后再试",
         "submitFailed": "提交失败",
         "updateFailed": "更新失败"
       }

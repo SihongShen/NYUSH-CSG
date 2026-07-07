@@ -21,6 +21,9 @@ import {
   formatSemester,
   type Season
 } from '@/lib/constants/semesters';
+import { SITES } from '@/lib/constants/sites';
+import { useCampus } from '@/components/providers/CampusProvider';
+import { formatProfessorName } from '@/utils/format';
 import type { Professor, ReviewWithAuthor } from '@/types';
 
 const NEW_PROF = '__new__';
@@ -44,6 +47,8 @@ export function ReviewForm({
 }: ReviewFormProps) {
   const t = useTranslations('review.form');
   const tCommon = useTranslations('common');
+  // site 跟随右上角全局校区切换，不在表单里单独选
+  const { campus } = useCampus();
   const isEdit = !!initialReview;
 
   const [profValue, setProfValue] = useState<string>(
@@ -111,6 +116,7 @@ export function ReviewForm({
     const payload: Record<string, unknown> = {
       course_id: courseId,
       semester: formatSemester(year, season),
+      site: campus,
       content_zh: contentZh.trim() || undefined,
       content_en: contentEn.trim() || undefined
     };
@@ -136,6 +142,10 @@ export function ReviewForm({
       toast.error(t('toasts.duplicate'));
       return;
     }
+    if (res.status === 429) {
+      toast.error(t('toasts.rateLimited'));
+      return;
+    }
     if (res.status === 400) {
       const data = (await res.json()) as { fields?: Record<string, string> };
       if (data.fields) setErrors(data.fields);
@@ -159,7 +169,7 @@ export function ReviewForm({
                 <SelectContent>
                   {professors.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.name_en}
+                      {formatProfessorName(p.name_en)}
                     </SelectItem>
                   ))}
                   <SelectItem value={NEW_PROF}>{t('newProfOption')}</SelectItem>
@@ -220,7 +230,14 @@ export function ReviewForm({
                 </SelectContent>
               </Select>
             </div>
+
           </div>
+
+          <p className="text-xs text-muted-foreground">
+            {t('siteFollowsCampus', {
+              site: SITES.find((s) => s.code === campus)?.name ?? campus
+            })}
+          </p>
         </>
       )}
 

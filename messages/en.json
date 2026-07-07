@@ -72,6 +72,7 @@
     "matched": "{total} matched",
     "total": "{total} total",
     "showingFirst": "showing first {showing}",
+    "loadMore": "Load more ({remaining} left)",
     "filterToggle": "Filters"
   },
   "course": {
@@ -88,6 +89,7 @@
     "detail": {
       "backToList": "Back to courses",
       "professorsLabel": "Professors:",
+      "equivalentsLabel": "Equivalent courses:",
       "info": {
         "title": "Course info",
         "campus": "Campus",
@@ -109,6 +111,9 @@
         "nameEnPlaceholder": "Introduction to Computer Science",
         "campus": "Campus",
         "campusHint": "To add a course for another campus, switch campus in the topbar first.",
+        "shEquivalent": "Shanghai equivalent course code (optional)",
+        "shEquivalentHint": "e.g. CSCI-SHU 210. Links to the existing Shanghai course, or auto-creates one with the same name if it doesn't exist yet",
+        "shEquivalentPlaceholder": "CSCI-SHU 210",
         "classification": "Classification (select at least one)",
         "lectureProf": "Lecture professor(s) *",
         "lectureProfPlaceholder": "e.g. Smith",
@@ -138,6 +143,9 @@
     "card": {
       "deletedAuthor": "[deleted]",
       "deletedStatus": "Deleted (only visible to you)",
+      "upvote": "Helpful",
+      "downvote": "Not helpful",
+      "voteFailed": "Vote failed, please try again",
       "confirmDeleteTitle": "Delete this review?",
       "confirmDeleteDesc": "Soft delete — only you will see it, and you can restore anytime."
     },
@@ -170,6 +178,7 @@
       "newProfPlaceholder": "New professor name",
       "year": "Year *",
       "semester": "Semester *",
+      "siteFollowsCampus": "This review will be tagged as taken at {site} (follows the campus switcher)",
       "zhLabel": "中文评价",
       "enLabel": "English Review",
       "zhPlaceholder": "可选",
@@ -186,6 +195,7 @@
         "submitted": "Review submitted",
         "updated": "Review updated",
         "duplicate": "You've already reviewed this professor + semester combination",
+        "rateLimited": "Too many submissions — try again in an hour",
         "submitFailed": "Submission failed",
         "updateFailed": "Update failed"
       }

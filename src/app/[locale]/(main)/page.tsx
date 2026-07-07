@@ -36,17 +36,17 @@ export default function HomePage() {
     core_types.length +
     (only_general_elective ? 1 : 0);
 
-  const { data, loading, error } = useCourses({
-    campus,
-    q: q || undefined,
-    majors: majors.length ? majors : undefined,
-    minors: minors.length ? minors : undefined,
-    core_types: core_types.length ? core_types : undefined,
-    only_general_elective
-  });
+  const { items, total, loading, loadingMore, error, hasMore, loadMore } =
+    useCourses({
+      campus,
+      q: q || undefined,
+      majors: majors.length ? majors : undefined,
+      minors: minors.length ? minors : undefined,
+      core_types: core_types.length ? core_types : undefined,
+      only_general_elective
+    });
 
-  const showingCount = data?.items.length ?? 0;
-  const total = data?.total ?? 0;
+  const showingCount = items?.length ?? 0;
   const hasFilter =
     !!q ||
     majors.length > 0 ||
@@ -67,7 +67,7 @@ export default function HomePage() {
             <Plus className="mr-1 h-4 w-4" />
             {t('addCourse')}
           </Button>
-          {!loading && data && (
+          {!loading && items && (
             <span className="whitespace-nowrap text-sm text-muted-foreground">
               {hasFilter ? t('matched', { total }) : t('total', { total })}
               {total > showingCount &&
@@ -108,11 +108,26 @@ export default function HomePage() {
             <CourseFilterPanel />
           </div>
         </div>
-        <CourseGrid
-          courses={data?.items ?? null}
-          loading={loading}
-          error={error}
-        />
+        <div>
+          <CourseGrid
+            courses={items}
+            loading={loading}
+            error={error}
+          />
+          {hasMore && !loading && !error && (
+            <div className="mt-6 flex justify-center">
+              <Button
+                variant="outline"
+                onClick={loadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore
+                  ? tCommon('states.loading')
+                  : t('loadMore', { remaining: total - showingCount })}
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       <CourseSubmitDialog open={submitOpen} onOpenChange={setSubmitOpen} />

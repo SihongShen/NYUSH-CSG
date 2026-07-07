@@ -3,14 +3,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Pencil, RotateCcw, Trash2 } from 'lucide-react';
+import { Pencil, RotateCcw, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ReviewForm } from './ReviewForm';
 import { cn } from '@/utils/cn';
-import type { ReviewWithAuthor } from '@/types';
+import { formatProfessorName } from '@/utils/format';
+import type { ReviewWithAuthor, VoteValue } from '@/types';
 
 export interface ReviewCardProps {
   review: ReviewWithAuthor;
@@ -36,6 +37,39 @@ export function ReviewCard({
   const [editing, setEditing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // 投票：本地乐观更新，失败回滚
+  const [myVote, setMyVote] = useState<VoteValue>(review.my_vote);
+  const [upvotes, setUpvotes] = useState(review.upvotes);
+  const [downvotes, setDownvotes] = useState(review.downvotes);
+  const [voting, setVoting] = useState(false);
+
+  async function handleVote(target: 1 | -1) {
+    if (voting) return;
+    const next: VoteValue = myVote === target ? 0 : target;   // 再点一次 = 撤票
+
+    const prev = { myVote, upvotes, downvotes };
+    setMyVote(next);
+    setUpvotes(upvotes + (next === 1 ? 1 : 0) - (prev.myVote === 1 ? 1 : 0));
+    setDownvotes(
+      downvotes + (next === -1 ? 1 : 0) - (prev.myVote === -1 ? 1 : 0)
+    );
+
+    setVoting(true);
+    const res = await fetch(`/api/reviews/${review.id}/vote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vote: next })
+    });
+    setVoting(false);
+
+    if (!res.ok) {
+      setMyVote(prev.myVote);
+      setUpvotes(prev.upvotes);
+      setDownvotes(prev.downvotes);
+      toast.error(t('voteFailed'));
+    }
+  }
 
   async function handleDelete() {
     setDeleting(true);
@@ -101,16 +135,21 @@ export function ReviewCard({
       )}
 
       <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
-          <span className="font-mono text-xs text-muted-foreground">
+        <div className="min-w-0 space-y-0.5">
+          {/* 第一行：用户名（黑色，大一号） */}
+          <p className="truncate font-mono text-base font-semibold text-foreground">
             {review.author_anonymous_id ?? t('deletedAuthor')}
-          </span>
-          <span className="text-muted-foreground">·</span>
-          <span>{review.professor_name_en}</span>
-          <span className="text-muted-foreground">·</span>
-          <span className="text-muted-foreground">{review.semester}</span>
-          <span className="text-muted-foreground">·</span>
-          <span className="text-muted-foreground">{review.site}</span>
+          </p>
+          {/* 第二行：教授 · 学期 · 校区（小一号） */}
+          <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted-foreground">
+            <span className="text-foreground/80">
+              {formatProfessorName(review.professor_name_en)}
+            </span>
+            <span>·</span>
+            <span>{review.semester}</span>
+            <span>·</span>
+            <span>{review.site}</span>
+          </p>
         </div>
 
         {isOwnReview && (
@@ -184,6 +223,44 @@ export function ReviewCard({
           </p>
         )}
       </div>
+
+      {!deleted && (
+        // 最后一行：点赞 / 点踩靠最右
+        <div className="mt-3 flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleVote(1)}
+            disabled={isOwnReview || voting}
+            aria-label={t('upvote')}
+            className={cn(
+              'h-7 gap-1 px-2 text-xs',
+              myVote === 1 && 'text-nyu-violet'
+            )}
+          >
+            <ThumbsUp
+              className={cn('h-3.5 w-3.5', myVote === 1 && 'fill-current')}
+            />
+            {upvotes > 0 && upvotes}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleVote(-1)}
+            disabled={isOwnReview || voting}
+            aria-label={t('downvote')}
+            className={cn(
+              'h-7 gap-1 px-2 text-xs',
+              myVote === -1 && 'text-destructive'
+            )}
+          >
+            <ThumbsDown
+              className={cn('h-3.5 w-3.5', myVote === -1 && 'fill-current')}
+            />
+            {downvotes > 0 && downvotes}
+          </Button>
+        </div>
+      )}
 
       <ConfirmDialog
         open={deleteOpen}

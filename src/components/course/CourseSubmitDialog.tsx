@@ -26,14 +26,12 @@ import {
   MINORS,
   type CoreType
 } from '@/lib/constants/majors';
+import { SITES } from '@/lib/constants/sites';
 import { cn } from '@/utils/cn';
-import type { CampusCode } from '@/types';
 
-const CAMPUS_NAMES: Record<CampusCode, string> = {
-  SH: 'Shanghai',
-  NY: 'New York',
-  AD: 'Abu Dhabi'
-};
+function campusName(code: string): string {
+  return SITES.find((s) => s.code === code)?.name ?? code;
+}
 
 export interface CourseSubmitDialogProps {
   open: boolean;
@@ -51,6 +49,7 @@ export function CourseSubmitDialog({
 
   const [code, setCode] = useState('');
   const [nameEn, setNameEn] = useState('');
+  const [shEquivalentCode, setShEquivalentCode] = useState('');
   const [majorRequired, setMajorRequired] = useState<string[]>([]);
   const [majorElective, setMajorElective] = useState<string[]>([]);
   const [minor, setMinor] = useState<string[]>([]);
@@ -64,6 +63,7 @@ export function CourseSubmitDialog({
   function resetForm() {
     setCode('');
     setNameEn('');
+    setShEquivalentCode('');
     setMajorRequired([]);
     setMajorElective([]);
     setMinor([]);
@@ -117,7 +117,12 @@ export function CourseSubmitDialog({
         core_type: coreType as CoreType[],
         is_general_elective: isGE,
         lecture_professors: lectureProfs,
-        recitation_tas: recitationTAs
+        recitation_tas: recitationTAs,
+        // 非上海校区可关联上海等同课；上海本部建课时不发这个字段
+        sh_equivalent_code:
+          campus !== 'SH' && shEquivalentCode.trim()
+            ? shEquivalentCode.trim()
+            : undefined
       })
     });
     setSubmitting(false);
@@ -173,8 +178,8 @@ export function CourseSubmitDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* -mx-3 px-3 给 overflow 容器留 12px 左右边距，避免 focus ring 被裁剪 */}
-          <div className="-mx-3 max-h-[60vh] space-y-5 overflow-y-auto px-3">
+          {/* -mx-3 px-3 给 overflow 容器留 12px 左右边距，pb-3 给底部（TA 输入框）留呼吸空间，避免 focus ring 被裁剪 */}
+          <div className="-mx-3 max-h-[60vh] space-y-5 overflow-y-auto px-3 pb-3">
             {/* ─────────── 基本信息 ─────────── */}
             <Section>
               <Field id="code" label={t('fields.code')} error={errors.code}>
@@ -206,12 +211,30 @@ export function CourseSubmitDialog({
               <div className="space-y-1.5">
                 <Label>{t('fields.campus')}</Label>
                 <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm">
-                  {CAMPUS_NAMES[campus]}
+                  {campusName(campus)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {t('fields.campusHint')}
                 </p>
               </div>
+
+              {/* 非上海校区：可填上海等同课课号（有则关联，库里没有会自动建上海锚点课） */}
+              {campus !== 'SH' && (
+                <Field
+                  id="sh-equivalent"
+                  label={t('fields.shEquivalent')}
+                  hint={t('fields.shEquivalentHint')}
+                >
+                  <Input
+                    id="sh-equivalent"
+                    value={shEquivalentCode}
+                    onChange={(e) => setShEquivalentCode(e.target.value)}
+                    placeholder={t('fields.shEquivalentPlaceholder')}
+                    disabled={submitting}
+                    className="h-9"
+                  />
+                </Field>
+              )}
             </Section>
 
             {/* ─────────── 课程分类 ─────────── */}
@@ -386,7 +409,8 @@ function CollapsibleCheckList({
         />
       </button>
       {open && (
-        <div className="space-y-1 border-t px-3 py-2">
+        // 限高 + 自带滚动 + 两列：长列表（19 个 major）不再被弹窗底部裁掉
+        <div className="grid max-h-56 grid-cols-1 gap-x-3 gap-y-1 overflow-y-auto border-t px-3 py-2 sm:grid-cols-2">
           {options.map((opt) => (
             <label
               key={opt}

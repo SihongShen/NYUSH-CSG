@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ReviewCard } from './ReviewCard';
+import { formatProfessorName } from '@/utils/format';
 import type { Professor, ReviewWithAuthor } from '@/types';
 
 // ---------------------------------------------------------------------------
@@ -178,7 +179,7 @@ export function ReviewList({
                   <SelectItem value={ALL_PROFS}>{t('allProfessors')}</SelectItem>
                   {professors.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.name_en}
+                      {formatProfessorName(p.name_en)}
                     </SelectItem>
                   ))}
                 </SelectContent>
