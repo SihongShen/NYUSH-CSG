@@ -54,8 +54,9 @@
 **Auth**: 需要登录  
 **Query**: `{ q?, campus?, major?, minor?, core?, ge?, limit?, offset? }`
 （`major` / `minor` / `core` 为逗号分隔多值；`ge=1` 表示只看通识选修；`campus` ∈ 16 个 NYU site）  
-**200**: `Paginated<Course>` — `{ items: Course[], total, limit, offset }`  
+**200**: `Paginated<CourseWithStats>` — `{ items: (Course & { review_count })[], total, limit, offset }`  
 **业务规则**:
+- `review_count` 为**等同课组合并**的评价总数（组成员嵌套 `reviews(count)` 聚合，RLS 生效）
 - 返回所有课程（MVP 不做审核过滤；`is_verified` 字段保留供未来扩展）
 - `q` 模糊匹配 `code` / `name_en` / **关联教授名**（教授名小写存储，匹配后经 course_professor 反查课程并入 OR）
 - 筛选：同维度 OR、跨维度 AND；Major 匹配 `major_required ∪ major_elective`
@@ -77,7 +78,7 @@
 ### `GET /api/courses/[id]`
 **Auth**: 需要登录  
 **Params**: `id` (uuid)  
-**200**: [`CourseDetail`](src/types/index.ts) — Course + `professors: Professor[]`  
+**200**: [`CourseDetail`](src/types/index.ts) — Course + `professors: Professor[]` + `equivalents: EquivalentCourse[]`（等同课组成员，不含自己）  
 **404**: 课程不存在或未审核  
 
 ---

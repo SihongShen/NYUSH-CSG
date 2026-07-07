@@ -77,17 +77,15 @@ src/
 │   │   └── tabs.tsx
 │   ├── auth/
 │   │   └── LoginForm.tsx               # Google OAuth 按钮，调用 signInWithOAuth（hd=nyu.edu）
-│   ├── course/
-│   │   ├── CourseCard.tsx
-│   │   ├── CourseSearch.tsx
-│   │   └── CourseDetail.tsx
-│   ├── review/
-│   │   ├── ReviewCard.tsx
-│   │   ├── ReviewForm.tsx
-│   │   └── ReviewList.tsx
+│   ├── course/                         # CourseCard / CourseGrid / CourseFilterPanel /
+│   │                                   # CourseDetailHeader / CourseSubmitDialog
+│   ├── review/                         # ReviewCard / ReviewForm / ReviewList / ReviewSubmitDialog
+│   ├── common/                         # LoadingButton / ConfirmDialog / EmptyState / ChipInput / BackToTop
+│   ├── profile/AnonymousIdBadge.tsx
+│   ├── providers/CampusProvider.tsx    # 全局校区状态（16 个 site，localStorage 持久化）
 │   └── layout/
-│       ├── Navbar.tsx
-│       └── ProtectedRoute.tsx
+│       ├── Navbar.tsx                  # 校区切换 + 全局搜索 + 用户菜单
+│       └── LocaleSwitcher.tsx
 │
 ├── lib/                                # 后端核心逻辑，禁止前端直接 import
 │   ├── db/
@@ -102,13 +100,13 @@ src/
 │       └── session.ts                  # getUser() / requireUser()
 │
 ├── hooks/                              # 前端 React hooks，只调用 /api/ 路由
-│   ├── useAuth.ts
-│   ├── useCourses.ts
-│   └── useReviews.ts
+│   ├── useAuth.ts / useMe.ts
+│   ├── useCourses.ts                   # 课程列表 + 加载更多（?n= 深度恢复）
+│   ├── useCourse.ts / useReviews.ts / useMyReviews.ts
+│   └── useUrlState.ts / useDebounce.ts
 │
 ├── types/
-│   ├── database.ts                     # Supabase CLI 自动生成，不手动修改
-│   ├── globals.d.ts                    # 第三方模块声明（如 *.css）
+│   ├── supabase.ts                     # Supabase CLI 自动生成（gen types），不手动修改
 │   └── index.ts                        # 前后端共用 TypeScript 类型
 │
 └── utils/
@@ -311,8 +309,9 @@ code  text  UNIQUE    -- "SHA"
 ### 包含
 - NYU Google 账号登录（OAuth，无密码体系）
 - 全局校区切换 = 16 个 NYU site（Navbar 下拉；课程归属、写评价的 site 都跟随它）
-- 课程搜索（按课程编号、名称、教授名）+ 加载更多分页
-- 课程详情页（显示该课所有评价，含等同课组内其他校区的评价）
+- 课程搜索（按课程编号、名称、教授名）+ 加载更多分页（深度持久化到 `?n=`）
+- 课程卡片显示真实评价数（等同课组合并计数）
+- 课程详情页（显示该课所有评价，含等同课组内其他校区的评价；教授筛选项从评价推导）
 - 写评价（文字内容中/英 / 教授 / 学期；site 自动取 Navbar 当前校区；无量化评分）
 - 修改评价、评价点赞 / 点踩
 - 我的评价页（查看 + 软删除）

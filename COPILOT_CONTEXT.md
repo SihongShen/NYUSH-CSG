@@ -156,7 +156,8 @@ export async function getReviews(courseId: string) {
 - 邮箱必须以 `@nyu.edu` 结尾：服务端 auth hook 强制 + callback `isAllowedEmail()` 复核（`lib/auth/validate.ts`）
 - `reviews` 的 `content_zh` 和 `content_en` 至少一个不为空，前端 `ReviewForm` 校验 + API 层复核
 - `semester` 格式为 `"2024 Fall"` / `"2025 Spring"` / `"2025 Summer"` / `"2025 January"`（`lib/constants/semesters.ts`）
-- 校区（`CampusCode`）= 16 个 NYU site，全局由 Navbar 切换（CampusProvider）；课程 `home_campus`、评价 `site` 都用它
+- 校区（`CampusCode`）= 16 个 NYU site，全局由 Navbar 切换（CampusProvider）；课程 `home_campus`、评价 `site` 都用它；site code 展示用 `siteName()`（`lib/constants/sites.ts`）
+- `GET /api/courses` 的 items 是 `CourseWithStats`（多一个 `review_count`，等同课组合并计数）
 - `site` 前端自动带 Navbar 当前校区（`isValidSite` 校验）；不传默认 `course.home_campus`
 - 非上海建课可带 `sh_equivalent_code`：有则关联上海课，无则自动建上海锚点课（`lib/db/courses.ts`）
 - 教授名写入前 `lower(trim())`，find-or-create 统一走 `lib/db/professors.ts`

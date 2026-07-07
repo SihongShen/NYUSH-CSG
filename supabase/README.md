@@ -126,8 +126,8 @@ set local request.jwt.claims to '{"sub": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}
 select * from public.reviews;
 -- 期望：返回所有 is_visible=true 的 + 自己 user_id 的（含软删）
 
-insert into public.reviews (user_id, course_id, professor_id, semester, site, rating, difficulty, workload, content_zh)
-values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '...', '...', '2025 Spring', 'SH', 5, 3, 3, '测试');
+insert into public.reviews (user_id, course_id, professor_id, semester, site, content_zh)
+values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '...', '...', '2025 Spring', 'SH', '测试');
 -- 期望：失败 —— with_check 要求 user_id = auth.uid()
 
 reset role;
