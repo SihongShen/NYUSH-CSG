@@ -131,7 +131,7 @@ export async function getReviews(courseId: string) {
 - 域名强制在服务端：Supabase auth hook `hook_before_user_created` 拒绝非 @nyu.edu；
   `GET /api/auth/callback` 应用层再校验一次（`isAllowedEmail`，在 `src/lib/auth/validate.ts`）
 - 回调失败跳 `/login?error=auth` 或 `/login?error=domain`，`LoginForm` 读 query 显示错误
-- `/register` 和 `/reset-password` 路由保留为重定向到 `/login`（旧链接兼容）
+- `/register` 路由保留为重定向到 `/login`（旧链接兼容；`/reset-password` 已删除）
 - 首次登录自动建用户，数据库触发器生成 `anonymous_id`
 
 ## 数据库表速查
@@ -139,22 +139,28 @@ export async function getReviews(courseId: string) {
 | 表名 | 主要字段 | 备注 |
 |------|---------|------|
 | users | id, email, anonymous_id, role | anonymous_id 是前端唯一可见身份 |
-| courses | id, code, name_en, home_campus, major_required[], major_elective[], minor[], core_type[], is_general_elective, is_verified | UNIQUE (home_campus, code)；数组字段是筛选维度 |
-| professors | id, name_en, is_verified | 保持最简 |
+| courses | id, code, name_en, home_campus, major_required[], major_elective[], minor[], core_type[], is_general_elective, is_verified, equivalent_id, created_by | UNIQUE (home_campus, code)；equivalent_id 星型指向上海锚点课（触发器防环/链） |
+| professors | id, name_en, is_verified | **name_en 小写存储 + UNIQUE**；展示用 `formatProfessorName()`（utils/format.ts） |
 | course_professor | course_id, professor_id | 多对多中间表 |
 | reviews | id, user_id, course_id, professor_id, semester, site, content_zh, content_en, is_visible | is_visible=false 为软删除；UNIQUE (user_id, course_id, professor_id, semester) |
-| sites | id, name, code | MVP 不使用，字段预留 |
+| review_votes | review_id, user_id, vote(±1) | PK (review_id, user_id)，每人每评价一票 |
+| sites | id, name, code | MVP 不使用；site 枚举在 lib/constants/sites.ts（16 个） |
 
 ## 已知的扩展字段（现在不实现，不要填充逻辑）
 
-- `courses.equivalent_id` — 海外课程等同映射
+- `users.role` / `courses.created_by` — admin 角色与课程编辑删除（未来做 admin 后台）
+- `courses.is_verified` / `professors.is_verified` — 审核流程
 
 ## 校验规则
 
 - 邮箱必须以 `@nyu.edu` 结尾：服务端 auth hook 强制 + callback `isAllowedEmail()` 复核（`lib/auth/validate.ts`）
 - `reviews` 的 `content_zh` 和 `content_en` 至少一个不为空，前端 `ReviewForm` 校验 + API 层复核
 - `semester` 格式为 `"2024 Fall"` / `"2025 Spring"` / `"2025 Summer"` / `"2025 January"`（`lib/constants/semesters.ts`）
-- `site` 不接受前端传值，后端自动取 `course.home_campus`
+- 校区（`CampusCode`）= 16 个 NYU site，全局由 Navbar 切换（CampusProvider）；课程 `home_campus`、评价 `site` 都用它
+- `site` 前端自动带 Navbar 当前校区（`isValidSite` 校验）；不传默认 `course.home_campus`
+- 非上海建课可带 `sh_equivalent_code`：有则关联上海课，无则自动建上海锚点课（`lib/db/courses.ts`）
+- 教授名写入前 `lower(trim())`，find-or-create 统一走 `lib/db/professors.ts`
+- 速率限制：评价 10 条/小时、建课 5 门/小时（`lib/db/rate-limit.ts`，DB count 实现），超限 429 `rate_limited`
 
 ## 软删除规则
 

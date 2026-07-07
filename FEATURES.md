@@ -19,7 +19,7 @@
 - 点按钮 → `supabase.auth.signInWithOAuth({ provider: 'google' })`（带 `hd=nyu.edu`）→ 整页跳转 Google 授权
 - 授权成功 → Google → Supabase → `GET /api/auth/callback` → 重定向到 `/`
 - 回调失败 → 跳回 `/login?error=auth`（授权失败）或 `/login?error=domain`（非 NYU 账号），`LoginForm` 读 query 显示对应 `Alert`
-- `/register` 和 `/reset-password` 是旧链接兼容重定向，会跳到 `/login`
+- `/register` 是旧链接兼容重定向，会跳到 `/login`（OAuth 无密码，reset-password 已删除）
 
 **域名限制**：`hd` 参数只是 UX 提示；强制校验在服务端 `hook_before_user_created`（拒绝非 @nyu.edu），callback 应用层再校验一次兜底。
 
@@ -54,7 +54,7 @@
 - **Minor**
 - **Core**（GPS / PoH / WAI 等子类）
 - **General Elective**（单个开关）
-- 校区由 Navbar 的 CampusProvider 全局切换（SH / NY / AD），不在筛选面板里
+- 校区由 Navbar 的 CampusProvider 全局切换（16 个 NYU site，学位校区在前 study-away 在后），不在筛选面板里
 
 筛选状态同步到 URL query（如 `/?q=CSCI&major=CS,DS&core=GPS`），方便分享 / 浏览器后退。
 
@@ -71,7 +71,8 @@
 
 **调用的 API**：
 - `GET /api/courses?q=&campus=&major=&minor=&core=&ge=&limit=20&offset=0`
-- 滚动到底翻页（offset 累加；或简单先 "加载更多" 按钮，看实现成本）
+- `q` 同时匹配课程编号 / 名称 / 教授名
+- 分页：列表底部「加载更多（还有 N 门）」按钮，offset 累加追加；筛选条件变化重置到第一页
 
 **空·错·加载状态**：
 - 加载中：骨架屏卡片
@@ -92,7 +93,8 @@
 
 **主要 UI**（从上到下三段）：
 
-1. **课程信息区**：返回按钮、`code` 大标题、`name_en`、major / minor / core_type / GE badge、教授列表、评价总数（无量化评分）
+1. **课程信息区**：返回按钮、`code` 大标题、`name_en`、major / minor / core_type / GE badge、教授列表、评价总数（无量化评分）、等同课链接（如 NY 的同一门课，点击跳其详情）
+   - **等同课评价聚合**：评价列表自动包含等同课组内其他校区课程的评价，靠每条评价的 site 标识区分来源
 2. **评价列表区**：见下方"排序"
 3. **写评价区**：见下方"写评价"
 
@@ -107,13 +109,15 @@
 - 用户**已写过** → 写评价区不显示（要修改去置顶那条点 [编辑]）
 
 **评价表单字段 / 校验**（写和编辑共用，编辑预填）：
-- **教授** dropdown，单选：来源该课程关联的教授列表；也可选"新教授"填 `new_professor_name`（后端 find-or-create 并关联到课程）
+- **教授** dropdown，单选：来源该课程关联的教授列表（小写存储、展示首字母大写）；也可选"新教授"填 `new_professor_name`（后端 find-or-create 并关联到课程）
 - **学期**：年份 + 季节两个 dropdown（Fall / Spring / Summer / January）
-- **校区**：不需要填——后端自动取 `course.home_campus`，不接受前端传值
+- **校区**：不在表单里选——自动取 Navbar 当前全局校区（表单底部有一行提示），study-away 先切校区再写评价
 - **评价内容**：中文 / 英文两栏，**至少一个非空**
 - rating / difficulty / workload 量化指标已移除（MVP 只做文字评价，未来可能加回）
+- 提交 429（超每小时 10 条限额）→ toast "提交太频繁"
 
 **关键交互**：
+- **点赞 / 点踩**：每条评价底部 👍 / 👎 按钮 + 计数；点击投票、再点撤票、点另一个改票（乐观更新，失败回滚）；不能给自己的评价投票（按钮禁用）
 - 写评价 inline 表单：提交成功 → 表单收起 + 新评价插入到列表置顶位置 + toast 成功
 - 编辑：点 [编辑] → 该评价行原地变表单 → 保存 → 变回只读
 - 删除：点 [删除] → 二次确认 dialog → 调 PATCH `is_visible=false` → 评价标灰但仍在置顶位置

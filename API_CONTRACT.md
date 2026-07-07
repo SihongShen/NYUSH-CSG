@@ -53,23 +53,26 @@
 ### `GET /api/courses`
 **Auth**: 需要登录  
 **Query**: `{ q?, campus?, major?, minor?, core?, ge?, limit?, offset? }`
-（`major` / `minor` / `core` 为逗号分隔多值；`ge=1` 表示只看通识选修；`campus` ∈ SH / NY / AD）  
+（`major` / `minor` / `core` 为逗号分隔多值；`ge=1` 表示只看通识选修；`campus` ∈ 16 个 NYU site）  
 **200**: `Paginated<Course>` — `{ items: Course[], total, limit, offset }`  
 **业务规则**:
 - 返回所有课程（MVP 不做审核过滤；`is_verified` 字段保留供未来扩展）
-- `q` 模糊匹配 `code` / `name_en`（ILIKE，特殊字符已转义）
+- `q` 模糊匹配 `code` / `name_en` / **关联教授名**（教授名小写存储，匹配后经 course_professor 反查课程并入 OR）
 - 筛选：同维度 OR、跨维度 AND；Major 匹配 `major_required ∪ major_elective`
 - 默认排序 `code ASC`；`limit` 上限 100
 
 ### `POST /api/courses`
 **Auth**: 需要登录  
-**Body**: [`CourseApplyPayload`](src/types/index.ts) `{ code, name_en, home_campus, major_required[], major_elective[], minor[], core_type[], is_general_elective, lecture_professors[], recitation_tas[] }`  
+**Body**: [`CourseApplyPayload`](src/types/index.ts) `{ code, name_en, home_campus, major_required[], major_elective[], minor[], core_type[], is_general_elective, lecture_professors[], recitation_tas[], sh_equivalent_code? }`  
 **201**: `{ id }` — 新建课程 ID（MVP 立即可见）  
 **400**: `validation`（`code` 缺失 / `name_en` < 3 字符 / 校区不合法 / 无任何分类 / 无 lecture 教授），详见 `fields`  
 **409**: `duplicate_code` + `existing_id`（同校区同 `code` 已存在；应用层查重 + DB 唯一索引兜底并发）  
+**429**: `rate_limited`（每人每小时最多 5 门）  
 **业务规则**:
-- MVP 阶段新建课程立即可见，不做审核
-- lecture + recitation 教授合并去重，同名教授若不存在则同时创建并关联
+- MVP 阶段新建课程立即可见，不做审核；`created_by` 记录建课人
+- lecture + recitation 教授合并去重；教授名小写存储 find-or-create（唯一索引兜底并发）
+- `sh_equivalent_code`：仅 `home_campus ≠ SH` 时接受（SH 传了报 400）。
+  上海库里有该课号 → 直接设 `equivalent_id` 关联；没有 → 自动建一门同名同分类的上海锚点课再关联
 
 ### `GET /api/courses/[id]`
 **Auth**: 需要登录  
@@ -88,6 +91,8 @@
 **400**: `course_id_required`（两个参数都没给）  
 **401**: `unauthorized`（`user_id=me` 但未登录）  
 **业务规则**:
+- **等同课聚合**：course_id 分支自动展开等同课组（锚点 + 全部成员），返回整组评价，前端靠 `site` 区分来源
+- 每条附带投票统计：`upvotes` / `downvotes` / `my_vote`（当前用户的票：1 / -1 / 0）
 - 可见性由 RLS 控制：`is_visible = true` 的或本人的（含软删）
 - 作者以 `author_anonymous_id` 显示（`get_anonymous_id()` 函数反查，不泄露邮箱）
 - 排序：`created_at DESC`
@@ -99,11 +104,12 @@
 **400**: `validation`（详见 `fields`）  
 **404**: `course_not_found`  
 **409**: `duplicate` — `UNIQUE (user_id, course_id, professor_id, semester)` 撞库  
+**429**: `rate_limited`（每人每小时最多 10 条）  
 **业务规则**:
-- `professor_id` 和 `new_professor_name` 二选一必填；新教授名走 find-or-create 并关联到课程
+- `professor_id` 和 `new_professor_name` 二选一必填；新教授名小写存储 find-or-create 并关联到课程
 - `content_zh` 和 `content_en` 至少一个非空非纯空白
 - `semester` 格式 `"YYYY Fall"` / `"YYYY Spring"` / `"YYYY Summer"` / `"YYYY January"`
-- `site` 不接受前端传值，自动取 `course.home_campus`
+- `site` 可选，16 个 NYU site 之一（前端自动带 Navbar 当前校区）；不传默认 `course.home_campus`
 - `user_id` 强制取 session 用户，不接受前端传
 
 ### `PATCH /api/reviews/[id]`
@@ -121,12 +127,20 @@
 - 不允许改 `course_id` / `professor_id` / `semester` / `site`（要改就删了重发）
 - 没有 `DELETE` 接口：真删被 RLS 拒绝，删除一律走软删（`is_visible=false`）
 
+### `POST /api/reviews/[id]/vote`
+**Auth**: 需要登录  
+**Params**: `id` (uuid)  
+**Body**: `{ vote: 1 | -1 | 0 }` — 1 赞 / -1 踩 / 0 撤票；每人每评价一票，改票 upsert  
+**200**: `{ ok: true }`  
+**400**: `validation`（vote 不是 1/-1/0）  
+**403**: `cannot_vote_own`（不能给自己的评价投票）  
+**404**: `not_found`（评价不存在或不可见）
+
 ---
 
 ## 待补充
 
 - [ ] 课程详情页是否要把"该课所有评价"一起返回？（性能 vs 多一次请求）
-- [ ] 评价点赞 / 举报 endpoint（MVP 不实现）
+- [ ] 评价举报 endpoint（点赞/点踩已实现）
 - [ ] 课程 / 教授审核 endpoint + admin 角色（等做 admin 后台时再加）
-- [ ] 速率限制 / 防滥用策略（注册、提交评价）
-- [ ] `site` 枚举的最终列表（先用宽松字符串，正式上线前定）
+- [ ] 等同课映射的后续调整接口（建课时可自助关联；建完想改/解绑目前仍需维护者手动）

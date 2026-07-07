@@ -43,8 +43,7 @@ src/
 │   ├── [locale]/                       # i18n 国际化路由匹配，支持中英切换
 │   │   ├── (auth)/                     # 登录路由组，不需要登录态
 │   │   │   ├── login/page.tsx          # Google OAuth 登录（唯一入口）
-│   │   │   ├── register/page.tsx       # 重定向到 /login（旧链接兼容）
-│   │   │   └── reset-password/page.tsx # 重定向到 /login（旧链接兼容）
+│   │   │   └── register/page.tsx       # 重定向到 /login（旧链接兼容）
 │   │   │
 │   │   ├── (main)/                     # 登录后才能访问，middleware 统一守卫
 │   │   │   ├── page.tsx                # 首页 / 课程搜索
@@ -64,8 +63,9 @@ src/
 │       │   ├── route.ts                # GET 搜索课程 / POST 申请新课
 │       │   └── [id]/route.ts          # GET 课程详情（含教授列表）
 │       └── reviews/
-│           ├── route.ts                # GET 评价列表 / POST 写评价
-│           └── [id]/route.ts          # PATCH 修改评价 / DELETE 软删除
+│           ├── route.ts                # GET 评价列表（含等同课聚合）/ POST 写评价
+│           ├── [id]/route.ts           # PATCH 改内容 / 软删 / 恢复
+│           └── [id]/vote/route.ts      # POST 点赞 / 点踩 / 撤票
 │
 ├── components/
 │   ├── ui/                             # shadcn 组件，不手动修改
@@ -94,7 +94,9 @@ src/
 │   │   ├── supabase.ts                 # 两个工厂：createClient()（anon + cookies，遵守 RLS）
 │   │   │                               #          createAdminClient()（service_role，绕过 RLS）
 │   │   ├── courses.ts                  # 课程相关数据库查询函数
-│   │   └── reviews.ts                  # 评价相关数据库查询函数
+│   │   ├── reviews.ts                  # 评价查询 + 投票（含等同课组展开）
+│   │   ├── professors.ts               # 教授 find-or-create（小写规范化）
+│   │   └── rate-limit.ts               # 每小时创建配额检查
 │   └── auth/
 │       ├── validate.ts                 # 邮箱域名校验（仅限 @nyu.edu）
 │       └── session.ts                  # getUser() / requireUser()
@@ -111,6 +113,7 @@ src/
 │
 └── utils/
     ├── supabase-browser.ts             # 前端 Supabase 客户端，使用 anon key
+    ├── format.ts                       # 教授名展示格式化（小写存储 → 首字母大写）
     └── cn.ts                           # shadcn className 工具函数
 
 messages/                               # i18n 翻译文件（项目根）
@@ -190,14 +193,15 @@ created_at    timestamptz DEFAULT now()
 id                  uuid    PK
 code                text    NOT NULL       -- 如 "CSCI-SHU 101"
 name_en             text    NOT NULL
-home_campus         text    NOT NULL DEFAULT 'SH'  -- 'SH' / 'NY' / 'AD'
+home_campus         text    NOT NULL DEFAULT 'SH'  -- 16 个 NYU site 之一（学位校区 + study-away）
 major_required      text[]  NOT NULL DEFAULT '{}'  -- 主修必修课的 major 列表
 major_elective      text[]  NOT NULL DEFAULT '{}'  -- 主修选修课的 major 列表
 minor               text[]  NOT NULL DEFAULT '{}'  -- minor 项目列表
 core_type           text[]  NOT NULL DEFAULT '{}'  -- 核心课程子类（GPS / PoH / WAI 等）
 is_general_elective boolean NOT NULL DEFAULT false -- 通识选修标记
 is_verified         boolean DEFAULT true   -- 字段为未来审核流程预留；MVP 默认 true，不在 RLS 中过滤
-equivalent_id       uuid    FK → courses(id) -- 自引用，海外课程指向上海等同课程（MVP 不实现）
+equivalent_id       uuid    FK → courses(id) -- 自引用，海外课指向上海锚点课（星型，触发器防环/链）
+created_by          uuid    FK → users(id)   -- 建课人（速率限制用；用户注销置 null）
 created_at          timestamptz DEFAULT now()
 
 UNIQUE (home_campus, code)
@@ -208,7 +212,7 @@ UNIQUE (home_campus, code)
 **professors**
 ```sql
 id          uuid  PK
-name_en     text  NOT NULL
+name_en     text  NOT NULL UNIQUE  -- 统一小写存储（防大小写重复），展示时前端首字母大写
 is_verified boolean DEFAULT true   -- 字段为未来审核流程预留；MVP 默认 true
 ```
 
@@ -226,7 +230,7 @@ user_id      uuid  FK → users(id)
 course_id    uuid  FK → courses(id)
 professor_id uuid  FK → professors(id)
 semester     text  NOT NULL  -- 格式："2024 Fall" / "2025 Spring"
-site         text  NOT NULL  -- 自动取 course.home_campus，不接受前端传值
+site         text  NOT NULL  -- 16 个 NYU site；前端自动带 Navbar 当前校区（不在表单里选）
 content_zh   text            -- 与 content_en 至少一个不为空（应用层校验）
 content_en   text
 is_visible   boolean DEFAULT true  -- 软删除字段
@@ -237,7 +241,24 @@ UNIQUE (user_id, course_id, professor_id, semester)
 -- 未来加回时新写 migration ADD COLUMN）
 ```
 
-**sites**（扩展表，MVP 不使用）
+**review_votes**（点赞 / 点踩，每人每评价一票）
+```sql
+review_id  uuid  FK → reviews(id)  ON DELETE CASCADE
+user_id    uuid  FK → users(id)    ON DELETE CASCADE
+vote       int2  NOT NULL CHECK (vote IN (-1, 1))
+created_at timestamptz DEFAULT now()
+PRIMARY KEY (review_id, user_id)
+```
+
+**等同课映射（courses.equivalent_id，已实现）**
+- 星型结构：非上海课指向上海锚点课；等同组 = 锚点 + 指向它的所有课
+- 触发器 `check_course_equivalent` 禁止自指 / 链式 / 锚点改挂
+- 课程详情返回 `equivalents[]`；评价列表自动聚合整组（靠 review.site 区分来源）
+- 映射建立：非上海校区建课时可填「上海等同课课号」（`sh_equivalent_code`）——
+  上海库里有就直接关联；没有就自动建一门同名同分类的上海锚点课再关联。
+  维护者也可在 Studio / SQL 手动改 `equivalent_id`
+
+**sites**（扩展表，MVP 不使用；site 枚举在 `lib/constants/sites.ts`）
 ```sql
 id    uuid  PK
 name  text  NOT NULL  -- "Shanghai"
@@ -251,6 +272,7 @@ code  text  UNIQUE    -- "SHA"
 - **users**：只能 SELECT 自己一行；所有写操作禁用，由 `handle_new_auth_user` 触发器同步写入（含 anonymous_id 生成 + 碰撞重试）
 - **courses / professors / course_professor / sites**：authenticated 可读；courses / professors / course_professor 可 INSERT；不开 UPDATE / DELETE
 - **reviews**：authenticated 可读 `is_visible = true` 的或本人的（含软删）；只能 INSERT / UPDATE 自己的；不开 DELETE（真删被数据库拒绝，软删走 UPDATE is_visible）
+- **review_votes**：authenticated 可读全部（聚合计数用）；INSERT / UPDATE / DELETE 仅限自己的票
 - **auth hook**：`hook_before_user_created` 在用户创建前拒绝非 @nyu.edu 邮箱（20260707000002）
 
 ---
@@ -262,7 +284,7 @@ code  text  UNIQUE    -- "SHA"
 
 ### 登录页 UX
 - 单一入口 `/login`，一个「使用 NYU 谷歌账号登录」按钮
-- `/register` 和 `/reset-password` 是旧链接兼容重定向，会跳到 `/login`
+- `/register` 是旧链接兼容重定向，会跳到 `/login`（OAuth 无密码，`/reset-password` 已删除）
 - 回调失败时带 `?error=auth`（授权失败）或 `?error=domain`（非 NYU 账号）跳回 `/login`，`LoginForm` 负责翻译显示
 
 ### 登录 / 首次注册（同一条流程）
@@ -288,18 +310,19 @@ code  text  UNIQUE    -- "SHA"
 
 ### 包含
 - NYU Google 账号登录（OAuth，无密码体系）
-- 课程搜索（按课程编号、名称、教授名）
-- 课程详情页（显示该课所有评价）
-- 写评价（文字内容中/英 / 教授 / 学期；校区自动取课程 home_campus，无量化评分）
-- 修改评价
+- 全局校区切换 = 16 个 NYU site（Navbar 下拉；课程归属、写评价的 site 都跟随它）
+- 课程搜索（按课程编号、名称、教授名）+ 加载更多分页
+- 课程详情页（显示该课所有评价，含等同课组内其他校区的评价）
+- 写评价（文字内容中/英 / 教授 / 学期；site 自动取 Navbar 当前校区；无量化评分）
+- 修改评价、评价点赞 / 点踩
 - 我的评价页（查看 + 软删除）
 - 匿名 ID 显示（不显示真实邮箱）
+- 等同课映射（星型指向上海锚点课；非上海建课时填上海课号即可自助关联/自动建锚点）
+- 速率限制（评价 10 条/小时、建课 5 门/小时，DB count 实现）
 
 ### 暂不实现（字段已预留）
 - 课程 / 教授审核流程（`is_verified` 字段已预留，MVP 默认 true 全部可见）
-- 课程等同性映射（`equivalent_id` 已预留）
-- 校区筛选（`sites` 表已建，`site` 字段先用字符串）
-- 评价点赞
+- admin 角色与课程 / 教授的编辑删除（`users.role` / `courses.created_by` 已预留）
 
 ---
 
