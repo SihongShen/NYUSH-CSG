@@ -272,9 +272,10 @@ max_frequency = "5s"
 # inactivity_timeout = "8h"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
-# [auth.hook.before_user_created]
-# enabled = true
-# uri = "pg-functions://postgres/auth/before-user-created-hook"
+# 强制只允许 @nyu.edu 账号注册（见 20260707000002_nyu_only_signup_hook.sql）
+[auth.hook.before_user_created]
+enabled = true
+uri = "pg-functions://postgres/public/hook_before_user_created"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
 # [auth.hook.custom_access_token]
@@ -328,6 +329,18 @@ url = ""
 # If enabled, the nonce check will be skipped. Required for local sign in with Google auth.
 skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
+email_optional = false
+
+# Google OAuth：用 NYU Google Workspace 账号登录（前端带 hd=nyu.edu，服务端由
+# before_user_created hook 强制校验域名）。client_id / secret 配在 .env.local。
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+redirect_uri = ""
+url = ""
+# 本地开发用 Google 登录需要跳过 nonce 校验（Supabase 官方说明）
+skip_nonce_check = true
 email_optional = false
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.

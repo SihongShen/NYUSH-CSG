@@ -30,40 +30,17 @@
   },
   "auth": {
     "title": "NYUSH Course Reviews",
-    "subtitle": "Sign in to browse and post course reviews",
-    "tabs": {
-      "login": "Sign in",
-      "register": "Register"
-    },
-    "fields": {
-      "netid": "NetID",
-      "password": "Password",
-      "confirmPassword": "Confirm password"
-    },
-    "placeholders": {
-      "netid": "e.g. abc1234",
-      "password": "At least 8 characters"
-    },
+    "subtitle": "Sign in with your NYU account to browse and post course reviews",
     "buttons": {
-      "login": "Sign in",
-      "register": "Register",
-      "loggingIn": "Signing in…",
-      "registering": "Submitting…"
+      "googleSignIn": "Sign in with your NYU Google account",
+      "signingIn": "Redirecting…"
     },
     "hints": {
-      "netidOnly": "Enter your NetID only — the @nyu.edu suffix is fixed"
+      "nyuOnly": "Only @nyu.edu accounts are allowed"
     },
     "errors": {
-      "invalidNetid": "Invalid NetID (must start with a letter, 2–15 alphanumeric chars)",
-      "passwordTooShort": "Password must be at least 8 characters",
-      "passwordMismatch": "Passwords do not match",
-      "loginFailed": "Sign-in failed: incorrect email or password",
-      "emailNotConfirmed": "Email not verified yet — check your inbox for the verification link",
-      "registerFailed": "Registration failed, please try again later",
-      "emailNotAllowed": "Only @nyu.edu emails are allowed"
-    },
-    "messages": {
-      "registerSuccess": "Registered. Check your inbox to verify, then sign in."
+      "loginFailed": "Sign-in failed, please try again",
+      "domainNotAllowed": "Only @nyu.edu accounts can sign in — please choose your NYU account"
     }
   },
   "nav": {

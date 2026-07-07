@@ -1,8 +1,7 @@
+import { Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoginForm } from '@/components/auth/LoginForm';
-import { RegisterForm } from '@/components/auth/RegisterForm';
 
 export default function LoginPage() {
   const t = useTranslations('auth');
@@ -15,18 +14,10 @@ export default function LoginPage() {
           <CardDescription>{t('subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">{t('tabs.login')}</TabsTrigger>
-              <TabsTrigger value="register">{t('tabs.register')}</TabsTrigger>
-            </TabsList>
-            <TabsContent value="login">
-              <LoginForm />
-            </TabsContent>
-            <TabsContent value="register">
-              <RegisterForm />
-            </TabsContent>
-          </Tabs>
+          {/* LoginForm 用 useSearchParams 读回调错误，需要 Suspense 边界 */}
+          <Suspense>
+            <LoginForm />
+          </Suspense>
         </CardContent>
       </Card>
     </main>
