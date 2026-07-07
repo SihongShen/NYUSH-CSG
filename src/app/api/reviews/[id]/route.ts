@@ -48,6 +48,9 @@ export async function PATCH(
       }
       return NextResponse.json({ ok: true });
     } catch (err) {
+      if (err instanceof Error && err.message === 'review_not_found') {
+        return NextResponse.json({ error: 'not_found' }, { status: 404 });
+      }
       console.error('PATCH /api/reviews/[id] visibility error', err);
       return NextResponse.json({ error: 'internal' }, { status: 500 });
     }
@@ -80,6 +83,9 @@ export async function PATCH(
     );
     return NextResponse.json({ ok: true });
   } catch (err) {
+    if (err instanceof Error && err.message === 'review_not_found') {
+      return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    }
     console.error('PATCH /api/reviews/[id] update error', err);
     return NextResponse.json({ error: 'internal' }, { status: 500 });
   }

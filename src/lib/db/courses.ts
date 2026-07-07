@@ -176,7 +176,19 @@ export async function createCourse(
     core_type: payload.core_type,
     is_general_elective: payload.is_general_elective
   });
-  if (insertCourseErr) throw insertCourseErr;
+  if (insertCourseErr) {
+    // 并发下两个请求同时通过步骤 1 的查重，唯一索引兜底
+    if ((insertCourseErr as { code?: string }).code === '23505') {
+      const { data: raced } = await supabase
+        .from('courses')
+        .select('id')
+        .eq('home_campus', payload.home_campus)
+        .eq('code', payload.code)
+        .maybeSingle();
+      throw new DuplicateCourseCodeError(raced?.id ?? '');
+    }
+    throw insertCourseErr;
+  }
 
   // 3. find-or-create 每个教授；lecture 和 reci 合并去重
   const allProfs = Array.from(

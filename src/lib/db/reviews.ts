@@ -193,7 +193,8 @@ export async function createReview(
   return { id: data.id as string };
 }
 
-/** 改评价内容（不允许改 prof / semester / site，FEATURES.md 约定）。 */
+/** 改评价内容（不允许改 prof / semester / site，FEATURES.md 约定）。
+ *  评价不存在或不属于该用户时抛 review_not_found（0 行匹配不算成功）。 */
 export async function updateReview(
   id: string,
   payload: ReviewUpdatePayload,
@@ -201,36 +202,42 @@ export async function updateReview(
 ): Promise<void> {
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('reviews')
     .update({
       content_zh: payload.content_zh ?? null,
       content_en: payload.content_en ?? null
     })
     .eq('id', id)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .select('id');
 
   if (error) throw error;
+  if (!data || data.length === 0) throw new Error('review_not_found');
 }
 
 /** 软删（PATCH is_visible=false）。RLS 保证只能操作自己的。 */
 export async function softDeleteReview(id: string, userId: string): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from('reviews')
-    .update({ is_visible: false })
-    .eq('id', id)
-    .eq('user_id', userId);
-  if (error) throw error;
+  await setReviewVisibility(id, userId, false);
 }
 
 /** 恢复（is_visible=true）。 */
 export async function restoreReview(id: string, userId: string): Promise<void> {
+  await setReviewVisibility(id, userId, true);
+}
+
+async function setReviewVisibility(
+  id: string,
+  userId: string,
+  isVisible: boolean
+): Promise<void> {
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('reviews')
-    .update({ is_visible: true })
+    .update({ is_visible: isVisible })
     .eq('id', id)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .select('id');
   if (error) throw error;
+  if (!data || data.length === 0) throw new Error('review_not_found');
 }

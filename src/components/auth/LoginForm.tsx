@@ -40,7 +40,11 @@ export function LoginForm() {
     setSubmitting(false);
 
     if (signInError) {
-      setError(t('errors.loginFailed'));
+      setError(
+        signInError.code === 'email_not_confirmed'
+          ? t('errors.emailNotConfirmed')
+          : t('errors.loginFailed')
+      );
       return;
     }
     router.replace('/');

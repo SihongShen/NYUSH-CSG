@@ -59,7 +59,12 @@ export async function middleware(request: NextRequest) {
   // auth 不可达时放行 —— 让下游 hook 自己报错，避免把 DB 故障误判成"用户被登出"
   if (authReachable && !user && !isPublicPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();
-    url.pathname = '/login';
+    const locale = routing.locales.find(
+      (l) =>
+        request.nextUrl.pathname === `/${l}` ||
+        request.nextUrl.pathname.startsWith(`/${l}/`)
+    );
+    url.pathname = locale ? `/${locale}/login` : '/login';
     return NextResponse.redirect(url);
   }
 

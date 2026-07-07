@@ -58,6 +58,7 @@
       "passwordTooShort": "Password must be at least 8 characters",
       "passwordMismatch": "Passwords do not match",
       "loginFailed": "Sign-in failed: incorrect email or password",
+      "emailNotConfirmed": "Email not verified yet — check your inbox for the verification link",
       "registerFailed": "Registration failed, please try again later",
       "emailNotAllowed": "Only @nyu.edu emails are allowed"
     },

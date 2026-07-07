@@ -45,7 +45,14 @@ export function RegisterForm() {
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setError(body?.error ?? t('errors.registerFailed'));
+      // 服务端返回的是 i18n key（如 emailNotAllowed）；未知错误（含 Supabase
+      // 原始 message）统一显示通用失败文案，不把裸 key / 英文原文抛给用户
+      const knownErrors = ['invalidNetid', 'passwordTooShort', 'emailNotAllowed'];
+      setError(
+        knownErrors.includes(body?.error)
+          ? t(`errors.${body.error}`)
+          : t('errors.registerFailed')
+      );
       return;
     }
     setSuccess(true);
