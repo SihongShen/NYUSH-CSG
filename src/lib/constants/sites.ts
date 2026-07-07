@@ -29,3 +29,8 @@ const SITE_CODES = SITES.map((s) => s.code);
 export function isValidSite(v: string): v is SiteCode {
   return (SITE_CODES as readonly string[]).includes(v);
 }
+
+/** code → 展示名（"FLO" → "Florence"）；未知 code 原样返回兜底 */
+export function siteName(code: string): string {
+  return SITES.find((s) => s.code === code)?.name ?? code;
+}

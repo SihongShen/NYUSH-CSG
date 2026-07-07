@@ -6,10 +6,13 @@ import type {
   Course,
   CourseApplyPayload,
   CourseDetail,
+  CourseWithStats,
   EquivalentCourse,
   Paginated,
   Professor
 } from '@/types';
+
+type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /** 课程 code 重复时抛这个错，API 转 409 + existing_id */
 export class DuplicateCourseCodeError extends Error {
@@ -54,9 +57,53 @@ function toArrayLiteral(values: string[]): string {
  *
  * 默认排序：code ASC。
  */
+/**
+ * 一页课程的评价数统计，按等同课组合并：
+ * 每门课的 review_count = 它所在等同组（锚点 + 全部成员）所有评价之和。
+ * 两次查询搞定：组成员反查（含嵌套 count 聚合）→ 按锚点汇总。
+ */
+async function fetchGroupReviewCounts(
+  supabase: Supabase,
+  courses: Course[]
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (courses.length === 0) return result;
+
+  // 每门课归属的锚点（自己是锚点，或指向的那门上海课）
+  const anchorOf = new Map<string, string>();
+  const anchors = new Set<string>();
+  for (const c of courses) {
+    const anchor = c.equivalent_id ?? c.id;
+    anchorOf.set(c.id, anchor);
+    anchors.add(anchor);
+  }
+
+  // 拉所有组成员 + 各自的评价数（嵌套 count，RLS 生效）
+  const anchorList = Array.from(anchors).join(',');
+  const { data: members, error } = await supabase
+    .from('courses')
+    .select('id, equivalent_id, reviews(count)')
+    .or(`id.in.(${anchorList}),equivalent_id.in.(${anchorList})`);
+  if (error) throw error;
+
+  const sumByAnchor = new Map<string, number>();
+  for (const m of members ?? []) {
+    const anchor = (m.equivalent_id as string | null) ?? (m.id as string);
+    const nested = m.reviews as { count?: number }[] | null;
+    const cnt = nested?.[0]?.count ?? 0;
+    sumByAnchor.set(anchor, (sumByAnchor.get(anchor) ?? 0) + cnt);
+  }
+
+  for (const c of courses) {
+    const anchor = anchorOf.get(c.id);
+    result.set(c.id, (anchor && sumByAnchor.get(anchor)) || 0);
+  }
+  return result;
+}
+
 export async function getCourses(
   params: GetCoursesParams = {}
-): Promise<Paginated<Course>> {
+): Promise<Paginated<CourseWithStats>> {
   const supabase = await createClient();
   const {
     campus,
@@ -129,8 +176,14 @@ export async function getCourses(
 
   if (error) throw error;
 
+  const pageCourses = (data ?? []) as Course[];
+  const reviewCounts = await fetchGroupReviewCounts(supabase, pageCourses);
+
   return {
-    items: (data ?? []) as Course[],
+    items: pageCourses.map((c) => ({
+      ...c,
+      review_count: reviewCounts.get(c.id) ?? 0
+    })),
     total: count ?? 0,
     limit: safeLimit,
     offset: safeOffset

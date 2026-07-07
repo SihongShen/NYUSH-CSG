@@ -5,10 +5,10 @@ import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/common/EmptyState';
 import { CourseCard } from './CourseCard';
-import type { Course } from '@/types';
+import type { CourseWithStats } from '@/types';
 
 export interface CourseGridProps {
-  courses: Course[] | null;
+  courses: CourseWithStats[] | null;
   loading: boolean;
   error: string | null;
 }
@@ -49,7 +49,7 @@ export function CourseGrid({ courses, loading, error }: CourseGridProps) {
   return (
     <div className="space-y-3">
       {courses.map((c) => (
-        <CourseCard key={c.id} course={c} />
+        <CourseCard key={c.id} course={c} reviewCount={c.review_count} />
       ))}
     </div>
   );

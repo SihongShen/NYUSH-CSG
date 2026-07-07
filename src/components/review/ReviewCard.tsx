@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Pencil, RotateCcw, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
@@ -11,6 +11,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ReviewForm } from './ReviewForm';
 import { cn } from '@/utils/cn';
 import { formatProfessorName } from '@/utils/format';
+import { siteName } from '@/lib/constants/sites';
 import type { ReviewWithAuthor, VoteValue } from '@/types';
 
 export interface ReviewCardProps {
@@ -43,9 +44,21 @@ export function ReviewCard({
   const [upvotes, setUpvotes] = useState(review.upvotes);
   const [downvotes, setDownvotes] = useState(review.downvotes);
   const [voting, setVoting] = useState(false);
+  // 防双击：state 更新是异步的，快速连点能穿过 voting 检查，用 ref 同步上锁
+  const votingRef = useRef(false);
+
+  // 列表 refetch 后组件按 key 复用、本地 state 不会重建——用服务器数据覆盖，
+  // 避免别人新投的票 / 恢复后的状态一直显示旧值
+  useEffect(() => {
+    setMyVote(review.my_vote);
+    setUpvotes(review.upvotes);
+    setDownvotes(review.downvotes);
+  }, [review.my_vote, review.upvotes, review.downvotes]);
 
   async function handleVote(target: 1 | -1) {
-    if (voting) return;
+    if (votingRef.current) return;
+    votingRef.current = true;
+
     const next: VoteValue = myVote === target ? 0 : target;   // 再点一次 = 撤票
 
     const prev = { myVote, upvotes, downvotes };
@@ -62,6 +75,7 @@ export function ReviewCard({
       body: JSON.stringify({ vote: next })
     });
     setVoting(false);
+    votingRef.current = false;
 
     if (!res.ok) {
       setMyVote(prev.myVote);
@@ -148,7 +162,7 @@ export function ReviewCard({
             <span>·</span>
             <span>{review.semester}</span>
             <span>·</span>
-            <span>{review.site}</span>
+            <span>{siteName(review.site)}</span>
           </p>
         </div>
 

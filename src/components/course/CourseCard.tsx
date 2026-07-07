@@ -6,7 +6,7 @@ import type { Course } from '@/types';
 
 export interface CourseCardProps {
   course: Course;
-  // 评价数（接评价后从聚合查询传进来；当前未接，默认 0）
+  // 评价数：等同课组合并计数（getCourses 聚合返回）
   reviewCount?: number;
 }
 

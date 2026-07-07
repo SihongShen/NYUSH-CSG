@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
@@ -48,8 +48,11 @@ export function Navbar({ userEmail }: NavbarProps) {
   const searchParams = useSearchParams();
   const { campus, setCampus } = useCampus();
   const t = useTranslations('nav');
-  // 初始从 URL 读 ?q=xxx，方便分享链接 / 刷新保持
+  // 输入框跟随 URL 的 ?q=（初始读取 + 前进/后退/点 logo 等导航后同步）
   const [query, setQuery] = useState(() => searchParams.get('q') ?? '');
+  useEffect(() => {
+    setQuery(searchParams.get('q') ?? '');
+  }, [searchParams]);
   const netid = userEmail?.split('@')[0] ?? t('userFallback');
   const campusName = CAMPUSES.find((c) => c.code === campus)?.name ?? '';
 
@@ -68,7 +71,15 @@ export function Navbar({ userEmail }: NavbarProps) {
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
     const q = query.trim();
-    router.push(q ? `/?q=${encodeURIComponent(q)}` : '/');
+    // 只改 q，保留当前已勾选的筛选（major / minor / core / ge）
+    const params = new URLSearchParams();
+    for (const key of ['major', 'minor', 'core', 'ge']) {
+      const v = searchParams.get(key);
+      if (v) params.set(key, v);
+    }
+    if (q) params.set('q', q);
+    const qs = params.toString();
+    router.push(qs ? `/?${qs}` : '/');
   }
 
   return (

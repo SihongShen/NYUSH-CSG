@@ -93,6 +93,11 @@ export type VoteValue = -1 | 0 | 1;   // 0 = 未投 / 撤票
 // Composite response shapes (join 后的数据)
 // ============================================================================
 
+/** 课程列表项：附带评价数统计（含等同课组内所有课程的评价合并计数） */
+export interface CourseWithStats extends Course {
+  review_count: number;
+}
+
 /** 等同课组成员（跨校区同一门课，如 NY 的 CSCI-UA 102 ≡ SH 的 CSCI-SHU 210） */
 export interface EquivalentCourse {
   id: string;

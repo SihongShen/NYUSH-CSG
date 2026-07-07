@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SITES, isValidSite } from './sites';
+import { SITES, isValidSite, siteName } from './sites';
 import {
   SEASONS,
   formatSemester,
@@ -26,6 +26,12 @@ describe('sites', () => {
     expect(isValidSite('XX')).toBe(false);
     expect(isValidSite('sh')).toBe(false); // 大小写敏感，前端只会传枚举值
     expect(isValidSite('')).toBe(false);
+  });
+
+  it('siteName 映射展示名，未知 code 原样兜底', () => {
+    expect(siteName('SH')).toBe('Shanghai');
+    expect(siteName('FLO')).toBe('Florence');
+    expect(siteName('XX')).toBe('XX');
   });
 });
 
