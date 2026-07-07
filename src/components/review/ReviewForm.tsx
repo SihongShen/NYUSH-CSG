@@ -21,7 +21,7 @@ import {
   formatSemester,
   type Season
 } from '@/lib/constants/semesters';
-import { SITES } from '@/lib/constants/sites';
+import { siteName } from '@/lib/constants/sites';
 import { useCampus } from '@/components/providers/CampusProvider';
 import { formatProfessorName } from '@/utils/format';
 import type { Professor, ReviewWithAuthor } from '@/types';
@@ -233,9 +233,11 @@ export function ReviewForm({
 
           </div>
 
-          <p className="text-xs text-muted-foreground">
-            {t('siteFollowsCampus', {
-              site: SITES.find((s) => s.code === campus)?.name ?? campus
+          {/* site 跟随全局校区，做成显眼的虚线框提示，避免用户带错校区 */}
+          <p className="rounded-md border border-dashed border-nyu-violet/40 bg-nyu-violet/5 px-3 py-2 text-xs">
+            {t.rich('siteFollowsCampus', {
+              site: siteName(campus),
+              b: (chunks) => <b className="font-semibold">{chunks}</b>
             })}
           </p>
         </>

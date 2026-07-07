@@ -17,7 +17,7 @@ import {
 import { EmptyState } from '@/components/common/EmptyState';
 import { ReviewCard } from './ReviewCard';
 import { formatProfessorName } from '@/utils/format';
-import type { Professor, ReviewWithAuthor } from '@/types';
+import type { ReviewWithAuthor } from '@/types';
 
 // ---------------------------------------------------------------------------
 // 排序
@@ -85,7 +85,6 @@ export interface ReviewListProps {
   reviews: ReviewWithAuthor[];
   loading: boolean;
   error: string | null;
-  professors: Professor[];
   canWriteReview: boolean;
   onWriteReview: () => void;
   onUpdated: () => void;
@@ -95,7 +94,6 @@ export function ReviewList({
   reviews,
   loading,
   error,
-  professors,
   canWriteReview,
   onWriteReview,
   onUpdated
@@ -105,6 +103,20 @@ export function ReviewList({
   const tCommon = useTranslations('common');
   const [profValue, setProfValue] = useState<string>(ALL_PROFS);
   const [sort, setSort] = useState<SortKey>('newest');
+
+  // 教授筛选项从评价本身推导（而不是课程关联的教授列表）——
+  // 等同课聚合进来的评价，其教授也能被筛到，不会被误过滤
+  const profOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of reviews) {
+      if (r.professor_id && !map.has(r.professor_id)) {
+        map.set(r.professor_id, r.professor_name_en);
+      }
+    }
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }, [reviews]);
 
   // 先按教授过滤，再按 sort 排序
   const processed = useMemo(() => {
@@ -148,7 +160,7 @@ export function ReviewList({
     );
   }
 
-  const hasProfFilter = professors.length >= 2;
+  const hasProfFilter = profOptions.length >= 2;
   const profFiltered = profValue !== ALL_PROFS;
 
   return (
@@ -177,9 +189,9 @@ export function ReviewList({
                 </SelectTrigger>
                 <SelectContent align="end">
                   <SelectItem value={ALL_PROFS}>{t('allProfessors')}</SelectItem>
-                  {professors.map((p) => (
+                  {profOptions.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {formatProfessorName(p.name_en)}
+                      {formatProfessorName(p.name)}
                     </SelectItem>
                   ))}
                 </SelectContent>

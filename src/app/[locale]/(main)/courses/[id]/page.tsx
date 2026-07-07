@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { useAuth } from '@/hooks/useAuth';
 import { useCourse } from '@/hooks/useCourse';
 import { useReviews } from '@/hooks/useReviews';
+import { siteName } from '@/lib/constants/sites';
 import type { CourseDetail } from '@/types';
 
 const SIDEBAR_GRID = 'grid grid-cols-1 items-start gap-8 lg:grid-cols-[220px_1fr]';
@@ -51,7 +52,7 @@ function CourseInfo({
       <dl className="space-y-2 px-1 text-sm">
         <div className="flex justify-between">
           <dt className="text-muted-foreground">{t('campus')}</dt>
-          <dd className="font-medium">{course.home_campus}</dd>
+          <dd className="font-medium">{siteName(course.home_campus)}</dd>
         </div>
         <div className="flex justify-between">
           <dt className="text-muted-foreground">{t('professors')}</dt>
@@ -174,7 +175,6 @@ export default function CourseDetailPage({
             reviews={reviews}
             loading={reviewsLoading}
             error={reviewsError}
-            professors={course.professors}
             canWriteReview={!hasOwnReview}
             onWriteReview={() => setSubmitOpen(true)}
             onUpdated={refreshAll}

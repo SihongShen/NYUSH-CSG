@@ -175,7 +175,7 @@
       "professor": "教授 *",
       "newProfOption": "+ 添加新教授",
       "noProfHint": "这门课还没有教授记录，请填写下方",
-      "siteFollowsCampus": "评价将标记为在 {site} 上的课（跟随右上角校区切换）",
+      "siteFollowsCampus": "这条评价将标记为在 <b>{site}</b> 上的课。不对的话，先用右上角切换校区再提交。",
       "newProfPlaceholder": "新教授名",
       "year": "年份 *",
       "semester": "学期 *",

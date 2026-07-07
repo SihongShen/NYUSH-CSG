@@ -62,6 +62,24 @@ export function ChipInput({
     }
   }
 
+  // 全角逗号"，"走中文输入法时 keydown 收到的是 Process，拦不到——
+  // 在 onChange 里统一按半角/全角逗号切分提交
+  function handleChange(raw: string) {
+    if (!/[,，]/.test(raw)) {
+      setInput(raw);
+      return;
+    }
+    const parts = raw.split(/[,，]/);
+    const remainder = parts.pop() ?? '';
+    const additions = Array.from(
+      new Set(parts.map((p) => p.trim()).filter(Boolean))
+    ).filter((p) => !value.includes(p));
+    if (additions.length > 0) {
+      onChange([...value, ...additions]);
+    }
+    setInput(remainder);
+  }
+
   function removeAt(i: number) {
     onChange(value.filter((_, idx) => idx !== i));
   }
@@ -96,7 +114,7 @@ export function ChipInput({
         id={id}
         type="text"
         value={input}
-        onChange={(e) => setInput(e.target.value)}
+        onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={() => commit(input)}
         placeholder={value.length === 0 ? placeholder : undefined}

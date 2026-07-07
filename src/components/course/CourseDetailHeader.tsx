@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { formatProfessorName } from '@/utils/format';
+import { siteName } from '@/lib/constants/sites';
 import type { CourseDetail } from '@/types';
 
 export interface CourseDetailHeaderProps {
@@ -64,7 +65,7 @@ export function CourseDetailHeader({ course }: CourseDetailHeaderProps) {
               >
                 {eq.code}
                 <span className="ml-1 text-xs text-muted-foreground">
-                  ({eq.home_campus})
+                  ({siteName(eq.home_campus)})
                 </span>
               </Link>
             ))}

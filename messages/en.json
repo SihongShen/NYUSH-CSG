@@ -178,7 +178,7 @@
       "newProfPlaceholder": "New professor name",
       "year": "Year *",
       "semester": "Semester *",
-      "siteFollowsCampus": "This review will be tagged as taken at {site} (follows the campus switcher)",
+      "siteFollowsCampus": "This review will be tagged as taken at <b>{site}</b>. If that's wrong, switch campus in the topbar first.",
       "zhLabel": "中文评价",
       "enLabel": "English Review",
       "zhPlaceholder": "可选",

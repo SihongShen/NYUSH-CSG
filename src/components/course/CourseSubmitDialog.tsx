@@ -26,12 +26,8 @@ import {
   MINORS,
   type CoreType
 } from '@/lib/constants/majors';
-import { SITES } from '@/lib/constants/sites';
+import { siteName } from '@/lib/constants/sites';
 import { cn } from '@/utils/cn';
-
-function campusName(code: string): string {
-  return SITES.find((s) => s.code === code)?.name ?? code;
-}
 
 export interface CourseSubmitDialogProps {
   open: boolean;
@@ -211,7 +207,7 @@ export function CourseSubmitDialog({
               <div className="space-y-1.5">
                 <Label>{t('fields.campus')}</Label>
                 <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm">
-                  {campusName(campus)}
+                  {siteName(campus)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {t('fields.campusHint')}
