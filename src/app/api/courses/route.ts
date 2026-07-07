@@ -5,17 +5,18 @@ import {
   getCourses
 } from '@/lib/db/courses';
 import { requireUser } from '@/lib/auth/session';
+import { HOURLY_LIMITS, isOverHourlyLimit } from '@/lib/db/rate-limit';
 import {
   isValidMajor,
   isValidMinor,
   isValidCoreType
 } from '@/lib/constants/majors';
+import { isValidSite } from '@/lib/constants/sites';
 import type { CampusCode } from '@/types';
 
-const ALLOWED_CAMPUSES: readonly CampusCode[] = ['SH', 'NY', 'AD'];
-
+// 校区 = 16 个 NYU site（学位校区 + study-away 均可拥有课程）
 function isCampus(v: string): v is CampusCode {
-  return (ALLOWED_CAMPUSES as readonly string[]).includes(v);
+  return isValidSite(v);
 }
 
 function parseIntSafe(v: string | null, fallback: number): number {
@@ -80,8 +81,10 @@ function asStringArray(v: unknown): string[] {
 
 export async function POST(request: Request) {
   // 1. Auth
+  let userId: string;
   try {
-    await requireUser();
+    const user = await requireUser();
+    userId = user.id;
   } catch {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
@@ -131,24 +134,49 @@ export async function POST(request: Request) {
     fields.lecture_professors = '至少需要 1 个 Lecture 教授';
   }
 
+  // 上海等同课课号：仅非上海课程有意义，上海本部建课时忽略
+  const sh_equivalent_code =
+    typeof body.sh_equivalent_code === 'string'
+      ? body.sh_equivalent_code.trim()
+      : '';
+  if (sh_equivalent_code && home_campus === 'SH') {
+    fields.sh_equivalent_code = '上海本部课程不需要填等同课课号';
+  }
+
   if (Object.keys(fields).length > 0) {
     return NextResponse.json({ error: 'validation', fields }, { status: 400 });
   }
 
-  // 4. Create
+  // 4. 速率限制：每人每小时最多 N 门
   try {
-    const result = await createCourse({
-      code,
-      name_en,
-      home_campus: home_campus!,
-      major_required,
-      major_elective,
-      minor,
-      core_type,
-      is_general_elective,
-      lecture_professors,
-      recitation_tas
-    });
+    if (
+      await isOverHourlyLimit('courses', 'created_by', userId, HOURLY_LIMITS.courses)
+    ) {
+      return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
+    }
+  } catch (err) {
+    console.error('POST /api/courses rate-limit check error', err);
+    return NextResponse.json({ error: 'internal' }, { status: 500 });
+  }
+
+  // 5. Create
+  try {
+    const result = await createCourse(
+      {
+        code,
+        name_en,
+        home_campus: home_campus!,
+        major_required,
+        major_elective,
+        minor,
+        core_type,
+        is_general_elective,
+        lecture_professors,
+        recitation_tas,
+        sh_equivalent_code: sh_equivalent_code || undefined
+      },
+      userId
+    );
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     if (err instanceof DuplicateCourseCodeError) {

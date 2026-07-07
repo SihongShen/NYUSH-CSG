@@ -69,6 +69,7 @@ export type Database = {
           code: string
           core_type: string[]
           created_at: string | null
+          created_by: string | null
           equivalent_id: string | null
           home_campus: string
           id: string
@@ -83,6 +84,7 @@ export type Database = {
           code: string
           core_type?: string[]
           created_at?: string | null
+          created_by?: string | null
           equivalent_id?: string | null
           home_campus?: string
           id: string
@@ -97,6 +99,7 @@ export type Database = {
           code?: string
           core_type?: string[]
           created_at?: string | null
+          created_by?: string | null
           equivalent_id?: string | null
           home_campus?: string
           id?: string
@@ -108,6 +111,13 @@ export type Database = {
           name_en?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "courses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "courses_equivalent_id_fkey"
             columns: ["equivalent_id"]
@@ -134,6 +144,42 @@ export type Database = {
           name_en?: string
         }
         Relationships: []
+      }
+      review_votes: {
+        Row: {
+          created_at: string
+          review_id: string
+          user_id: string
+          vote: number
+        }
+        Insert: {
+          created_at?: string
+          review_id: string
+          user_id: string
+          vote: number
+        }
+        Update: {
+          created_at?: string
+          review_id?: string
+          user_id?: string
+          vote?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_votes_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviews: {
         Row: {
@@ -244,6 +290,7 @@ export type Database = {
     }
     Functions: {
       get_anonymous_id: { Args: { p_user_id: string }; Returns: string }
+      hook_before_user_created: { Args: { event: Json }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

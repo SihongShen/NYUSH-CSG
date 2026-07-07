@@ -1,27 +1,95 @@
 import { createClient } from './supabase';
+import { findOrCreateProfessor } from './professors';
 import type {
   ReviewCreatePayload,
   ReviewUpdatePayload,
   ReviewWithAuthor,
-  ReviewWithCourse
+  ReviewWithCourse,
+  VoteValue
 } from '@/types';
 
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+interface VoteStats {
+  upvotes: number;
+  downvotes: number;
+  my_vote: VoteValue;
+}
+
+/** 批量拉一组评价的投票统计（一次查询，内存聚合） */
+async function fetchVoteStats(
+  supabase: Supabase,
+  reviewIds: string[],
+  currentUserId: string | null
+): Promise<Map<string, VoteStats>> {
+  const stats = new Map<string, VoteStats>();
+  if (reviewIds.length === 0) return stats;
+
+  const { data, error } = await supabase
+    .from('review_votes')
+    .select('review_id, user_id, vote')
+    .in('review_id', reviewIds);
+  if (error) throw error;
+
+  for (const row of data ?? []) {
+    const s = stats.get(row.review_id) ?? {
+      upvotes: 0,
+      downvotes: 0,
+      my_vote: 0 as VoteValue
+    };
+    if (row.vote === 1) s.upvotes += 1;
+    else s.downvotes += 1;
+    if (currentUserId && row.user_id === currentUserId) {
+      s.my_vote = row.vote as VoteValue;
+    }
+    stats.set(row.review_id, s);
+  }
+  return stats;
+}
+
+const EMPTY_VOTES: VoteStats = { upvotes: 0, downvotes: 0, my_vote: 0 };
+
+/** 展开等同课组：给一个 course_id，返回整组的 id（锚点 + 全部成员） */
+async function resolveEquivalentGroup(
+  supabase: Supabase,
+  courseId: string
+): Promise<string[]> {
+  const { data: course } = await supabase
+    .from('courses')
+    .select('id, equivalent_id')
+    .eq('id', courseId)
+    .maybeSingle();
+  if (!course) return [courseId];
+
+  const anchorId = course.equivalent_id ?? course.id;
+  const { data: group } = await supabase
+    .from('courses')
+    .select('id')
+    .or(`id.eq.${anchorId},equivalent_id.eq.${anchorId}`);
+
+  const ids = (group ?? []).map((c) => c.id as string);
+  return ids.length > 0 ? ids : [courseId];
+}
+
 /**
- * 一门课的所有评价（RLS 处理可见性：
- *   - is_visible = true 给所有 authenticated
- *   - 自己软删的也能看到，has_visible 字段反映状态）
+ * 一门课的所有评价，**含等同课组内其他校区课程的评价**
+ * （NY 的 Data Structures 和 SH 的等同课评价合并展示，靠 site 字段区分来源）。
  *
- * 同时 enrich：作者 anonymous_id（走 get_anonymous_id 函数）+ 教授名（join）
+ * RLS 处理可见性：is_visible = true 给所有 authenticated；自己软删的也能看到。
+ * 同时 enrich：作者 anonymous_id + 教授名 + 点赞统计。
  */
 export async function listReviewsForCourse(
-  courseId: string
+  courseId: string,
+  currentUserId: string | null
 ): Promise<ReviewWithAuthor[]> {
   const supabase = await createClient();
+
+  const courseIds = await resolveEquivalentGroup(supabase, courseId);
 
   const { data, error } = await supabase
     .from('reviews')
     .select('*, professors(id, name_en)')
-    .eq('course_id', courseId)
+    .in('course_id', courseIds)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -46,10 +114,17 @@ export async function listReviewsForCourse(
     })
   );
 
+  const voteStats = await fetchVoteStats(
+    supabase,
+    data.map((r: { id: string }) => r.id),
+    currentUserId
+  );
+
   return data.map((r) => {
     const row = r as Record<string, unknown>;
     const prof = row.professors as { name_en?: string } | null;
     const userId = row.user_id as string | null;
+    const votes = voteStats.get(row.id as string) ?? EMPTY_VOTES;
     return {
       id: row.id as string,
       user_id: userId as string,
@@ -62,7 +137,8 @@ export async function listReviewsForCourse(
       is_visible: row.is_visible as boolean,
       created_at: row.created_at as string,
       author_anonymous_id: userId ? anonMap.get(userId) ?? null : null,
-      professor_name_en: prof?.name_en ?? ''
+      professor_name_en: prof?.name_en ?? '',
+      ...votes
     };
   });
 }
@@ -94,12 +170,19 @@ export async function listReviewsForUser(
   });
   anonymousId = (anon as string | null) ?? null;
 
+  const voteStats = await fetchVoteStats(
+    supabase,
+    data.map((r: { id: string }) => r.id),
+    userId
+  );
+
   return data.map((r) => {
     const row = r as Record<string, unknown>;
     const prof = row.professors as { name_en?: string } | null;
     const course = row.courses as
       | { code?: string; name_en?: string }
       | null;
+    const votes = voteStats.get(row.id as string) ?? EMPTY_VOTES;
     return {
       id: row.id as string,
       user_id: row.user_id as string,
@@ -114,7 +197,8 @@ export async function listReviewsForUser(
       author_anonymous_id: anonymousId,
       professor_name_en: prof?.name_en ?? '',
       course_code: course?.code ?? '',
-      course_name_en: course?.name_en ?? ''
+      course_name_en: course?.name_en ?? '',
+      ...votes
     };
   });
 }
@@ -135,23 +219,10 @@ export async function createReview(
   let professorId = payload.professor_id;
 
   if (!professorId && payload.new_professor_name) {
-    const name = payload.new_professor_name.trim();
-
-    const { data: existingProf } = await supabase
-      .from('professors')
-      .select('id')
-      .eq('name_en', name)
-      .maybeSingle();
-
-    if (existingProf) {
-      professorId = existingProf.id;
-    } else {
-      professorId = crypto.randomUUID();
-      const { error: profErr } = await supabase
-        .from('professors')
-        .insert({ id: professorId, name_en: name });
-      if (profErr) throw profErr;
-    }
+    professorId = await findOrCreateProfessor(
+      supabase,
+      payload.new_professor_name
+    );
 
     // 关联到课程（重复忽略）
     await supabase
@@ -166,7 +237,7 @@ export async function createReview(
     throw new Error('professor_required');
   }
 
-  // 自动 derive site：用课程的 home_campus
+  // site：前端可传 16 个 NYU site（study-away 场景），不传默认课程的 home_campus
   const { data: courseRow, error: courseErr } = await supabase
     .from('courses')
     .select('home_campus')
@@ -182,7 +253,7 @@ export async function createReview(
       course_id: payload.course_id,
       professor_id: professorId,
       semester: payload.semester,
-      site: courseRow.home_campus,
+      site: payload.site ?? courseRow.home_campus,
       content_zh: payload.content_zh ?? null,
       content_en: payload.content_en ?? null
     })
@@ -191,6 +262,49 @@ export async function createReview(
 
   if (error) throw error;
   return { id: data.id as string };
+}
+
+// ============================================================================
+// 点赞 / 点踩
+// ============================================================================
+
+/**
+ * 投票（+1 赞 / -1 踩 / 0 撤票）。
+ * - 评价不存在或不可见（且不是自己的）→ review_not_found
+ * - 不能给自己的评价投票 → cannot_vote_own
+ */
+export async function setReviewVote(
+  reviewId: string,
+  userId: string,
+  vote: -1 | 0 | 1
+): Promise<void> {
+  const supabase = await createClient();
+
+  const { data: review } = await supabase
+    .from('reviews')
+    .select('id, user_id')
+    .eq('id', reviewId)
+    .maybeSingle();
+  if (!review) throw new Error('review_not_found');
+  if (review.user_id === userId) throw new Error('cannot_vote_own');
+
+  if (vote === 0) {
+    const { error } = await supabase
+      .from('review_votes')
+      .delete()
+      .eq('review_id', reviewId)
+      .eq('user_id', userId);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await supabase
+    .from('review_votes')
+    .upsert(
+      { review_id: reviewId, user_id: userId, vote },
+      { onConflict: 'review_id,user_id' }
+    );
+  if (error) throw error;
 }
 
 /** 改评价内容（不允许改 prof / semester / site，FEATURES.md 约定）。

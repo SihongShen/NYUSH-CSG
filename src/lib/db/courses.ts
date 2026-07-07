@@ -1,10 +1,12 @@
 import { createClient } from './supabase';
+import { findOrCreateProfessor } from './professors';
 import type {
   CampusCode,
   CoreType,
   Course,
   CourseApplyPayload,
   CourseDetail,
+  EquivalentCourse,
   Paginated,
   Professor
 } from '@/types';
@@ -78,7 +80,29 @@ export async function getCourses(
 
   if (q && q.trim()) {
     const escaped = escapeFilterValue(q.trim());
-    query = query.or(`code.ilike.%${escaped}%,name_en.ilike.%${escaped}%`);
+    const orParts = [`code.ilike.%${escaped}%`, `name_en.ilike.%${escaped}%`];
+
+    // 教授名匹配：教授名小写存储，先查中标教授 → 关联课程 id，并入 OR 条件
+    const { data: profMatches } = await supabase
+      .from('professors')
+      .select('id')
+      .ilike('name_en', `%${escapeFilterValue(q.trim().toLowerCase())}%`)
+      .limit(50);
+    if (profMatches && profMatches.length > 0) {
+      const { data: cps } = await supabase
+        .from('course_professor')
+        .select('course_id')
+        .in('professor_id', profMatches.map((p) => p.id))
+        .limit(500);
+      const courseIds = Array.from(
+        new Set((cps ?? []).map((c) => c.course_id as string))
+      );
+      if (courseIds.length > 0) {
+        orParts.push(`id.in.(${courseIds.join(',')})`);
+      }
+    }
+
+    query = query.or(orParts.join(','));
   }
 
   if (majors && majors.length > 0) {
@@ -135,7 +159,22 @@ export async function getCourse(id: string): Promise<CourseDetail | null> {
     .map((row: { professors: unknown }) => row.professors as Professor | null)
     .filter((p): p is Professor => !!p && typeof p === 'object' && 'id' in p);
 
-  return { ...(course as Course), professors };
+  // 等同课组：锚点（equivalent_id 指向的课，或自己）+ 指向锚点的所有课，排除自己
+  const anchorId = (course as Course).equivalent_id ?? id;
+  const { data: groupRows } = await supabase
+    .from('courses')
+    .select('id, code, name_en, home_campus')
+    .or(`id.eq.${anchorId},equivalent_id.eq.${anchorId}`);
+  const equivalents: EquivalentCourse[] = (groupRows ?? [])
+    .filter((c) => c.id !== id)
+    .map((c) => ({
+      id: c.id as string,
+      code: c.code as string,
+      name_en: c.name_en as string,
+      home_campus: c.home_campus as CampusCode
+    }));
+
+  return { ...(course as Course), professors, equivalents };
 }
 
 /**
@@ -147,7 +186,8 @@ export async function getCourse(id: string): Promise<CourseDetail | null> {
  * MVP 不做事务回滚；步骤 2 之后失败 = 课程已建但教授关联不全，可由后续编辑补充。
  */
 export async function createCourse(
-  payload: CourseApplyPayload
+  payload: CourseApplyPayload,
+  userId: string
 ): Promise<{ id: string }> {
   const supabase = await createClient();
 
@@ -174,7 +214,8 @@ export async function createCourse(
     major_elective: payload.major_elective,
     minor: payload.minor,
     core_type: payload.core_type,
-    is_general_elective: payload.is_general_elective
+    is_general_elective: payload.is_general_elective,
+    created_by: userId
   });
   if (insertCourseErr) {
     // 并发下两个请求同时通过步骤 1 的查重，唯一索引兜底
@@ -190,6 +231,47 @@ export async function createCourse(
     throw insertCourseErr;
   }
 
+  // 2.5 上海等同课关联（仅非上海课程）：
+  //     填了课号 → 上海库里有这门课就直接关联；没有就自动建一门上海锚点课
+  //     （复用本课的名称和分类，课号用填的），再关联。
+  if (payload.home_campus !== 'SH' && payload.sh_equivalent_code) {
+    const shCode = payload.sh_equivalent_code.trim();
+
+    let anchorId: string;
+    const { data: shCourse } = await supabase
+      .from('courses')
+      .select('id, equivalent_id')
+      .eq('home_campus', 'SH')
+      .eq('code', shCode)
+      .maybeSingle();
+
+    if (shCourse) {
+      // 理论上上海课都是锚点；万一它自己有 equivalent_id，跟随到真正的锚点
+      anchorId = (shCourse.equivalent_id as string | null) ?? shCourse.id;
+    } else {
+      anchorId = crypto.randomUUID();
+      const { error: shErr } = await supabase.from('courses').insert({
+        id: anchorId,
+        code: shCode,
+        name_en: payload.name_en,
+        home_campus: 'SH',
+        major_required: payload.major_required,
+        major_elective: payload.major_elective,
+        minor: payload.minor,
+        core_type: payload.core_type,
+        is_general_elective: payload.is_general_elective,
+        created_by: userId
+      });
+      if (shErr) throw shErr;
+    }
+
+    const { error: linkErr } = await supabase
+      .from('courses')
+      .update({ equivalent_id: anchorId })
+      .eq('id', courseId);
+    if (linkErr) throw linkErr;
+  }
+
   // 3. find-or-create 每个教授；lecture 和 reci 合并去重
   const allProfs = Array.from(
     new Set(
@@ -200,23 +282,7 @@ export async function createCourse(
   );
 
   for (const name of allProfs) {
-    let profId: string;
-
-    const { data: existingProf } = await supabase
-      .from('professors')
-      .select('id')
-      .eq('name_en', name)
-      .maybeSingle();
-
-    if (existingProf) {
-      profId = existingProf.id;
-    } else {
-      profId = crypto.randomUUID();
-      const { error: profErr } = await supabase
-        .from('professors')
-        .insert({ id: profId, name_en: name });
-      if (profErr) throw profErr;
-    }
+    const profId = await findOrCreateProfessor(supabase, name);
 
     // 关联表，重复（uniq PK）忽略
     await supabase

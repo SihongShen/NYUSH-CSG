@@ -38,7 +38,15 @@ export type CoreType =
   | 'STS'
   | 'AT';
 
-export type CampusCode = 'SH' | 'NY' | 'AD';
+/**
+ * 校区 = 16 个 NYU site（3 个学位校区 + 13 个 study-away）。
+ * 全局校区切换（Navbar）、课程归属、评价 site 共用这一个概念。
+ * 与 lib/constants/sites.ts 的 SITES 保持同步。
+ */
+export type CampusCode =
+  | 'SH' | 'NY' | 'AD'
+  | 'ACC' | 'BER' | 'BUE' | 'FLO' | 'LON' | 'LA' | 'MAD'
+  | 'PAR' | 'PRG' | 'SYD' | 'TEL' | 'TUL' | 'WAS';
 
 export interface Course {
   id: string;
@@ -71,7 +79,7 @@ export interface Review {
   course_id: string;
   professor_id: string;
   semester: string;         // "2024 Fall" | "2025 Spring" 等
-  site: string;             // "SH" | "NY" | "AD" 等
+  site: string;             // 16 个 NYU site 之一（SH / NY / AD / FLO / LON ...）
   // MVP 不做量化指标（rating / difficulty / workload 已删除）
   content_zh: string | null;
   content_en: string | null;
@@ -79,17 +87,31 @@ export interface Review {
   created_at: string;
 }
 
+export type VoteValue = -1 | 0 | 1;   // 0 = 未投 / 撤票
+
 // ============================================================================
 // Composite response shapes (join 后的数据)
 // ============================================================================
 
+/** 等同课组成员（跨校区同一门课，如 NY 的 CSCI-UA 102 ≡ SH 的 CSCI-SHU 210） */
+export interface EquivalentCourse {
+  id: string;
+  code: string;
+  name_en: string;
+  home_campus: CampusCode;
+}
+
 export interface CourseDetail extends Course {
   professors: Professor[];
+  equivalents: EquivalentCourse[];   // 不含自己；空数组 = 没有等同课
 }
 
 export interface ReviewWithAuthor extends Review {
   author_anonymous_id: string | null;   // null = 作者已注销，前端显示 "[已注销用户]"
   professor_name_en: string;
+  upvotes: number;
+  downvotes: number;
+  my_vote: VoteValue;                   // 当前用户对这条评价的投票
 }
 
 // profile 页用：评价 + 课程基本信息（让用户能看出是哪门课的评价）
@@ -102,11 +124,6 @@ export interface ReviewWithCourse extends ReviewWithAuthor {
 // Request payloads (POST / PATCH body 形状)
 // ============================================================================
 
-export interface RegisterPayload {
-  netid: string;
-  password: string;
-}
-
 export interface CourseApplyPayload {
   code: string;
   name_en: string;
@@ -118,6 +135,8 @@ export interface CourseApplyPayload {
   is_general_elective: boolean;
   lecture_professors: string[];     // 至少 1 个，前端校验
   recitation_tas: string[];         // 可选；后端合并存入 professors
+  /** 非上海课程可填上海等同课课号：库里有就关联，没有就自动建一门上海锚点课再关联 */
+  sh_equivalent_code?: string;
 }
 
 export interface ReviewCreatePayload {
@@ -125,7 +144,7 @@ export interface ReviewCreatePayload {
   professor_id?: string;          // 二选一：选已有教授
   new_professor_name?: string;    // 二选一：录入新教授（后端创建 + 关联到课程）
   semester: string;
-  // site 不再由前端传，后端自动用 course.home_campus
+  site?: string;                  // 16 个 site；前端自动带当前全局校区，不传默认 course.home_campus
   content_zh?: string;
   content_en?: string;
 }

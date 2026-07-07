@@ -5,7 +5,9 @@ import {
   listReviewsForUser
 } from '@/lib/db/reviews';
 import { getUser, requireUser } from '@/lib/auth/session';
+import { HOURLY_LIMITS, isOverHourlyLimit } from '@/lib/db/rate-limit';
 import { isValidSemester } from '@/lib/constants/semesters';
+import { isValidSite } from '@/lib/constants/sites';
 
 // ============================================================================
 // GET /api/reviews
@@ -42,7 +44,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const items = await listReviewsForCourse(courseId);
+    const user = await getUser();
+    const items = await listReviewsForCourse(courseId, user?.id ?? null);
     return NextResponse.json({ items });
   } catch (error) {
     console.error('GET /api/reviews error', error);
@@ -91,7 +94,9 @@ export async function POST(request: Request) {
   const semester = strField(body, 'semester');
   if (!isValidSemester(semester)) fields.semester = '学期不合法';
 
-  // site 不接受前端传值，DB 层自动用 course.home_campus
+  // site 可选（study-away 场景选具体 site）；不传由 DB 层默认 course.home_campus
+  const site = strField(body, 'site');
+  if (site && !isValidSite(site)) fields.site = '校区不合法';
 
   const content_zh = strField(body, 'content_zh');
   const content_en = strField(body, 'content_en');
@@ -103,6 +108,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'validation', fields }, { status: 400 });
   }
 
+  // 速率限制：每人每小时最多 N 条
+  try {
+    if (
+      await isOverHourlyLimit('reviews', 'user_id', userId, HOURLY_LIMITS.reviews)
+    ) {
+      return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
+    }
+  } catch (err) {
+    console.error('POST /api/reviews rate-limit check error', err);
+    return NextResponse.json({ error: 'internal' }, { status: 500 });
+  }
+
   // Create
   try {
     const result = await createReview(
@@ -111,6 +128,7 @@ export async function POST(request: Request) {
         professor_id,
         new_professor_name: new_professor_name || undefined,
         semester,
+        site: site || undefined,
         content_zh: content_zh || undefined,
         content_en: content_en || undefined
       },
