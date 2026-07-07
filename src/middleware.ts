@@ -5,7 +5,7 @@ import { routing } from '../i18n';
 
 const intlMiddleware = createIntlMiddleware(routing);
 
-const PUBLIC_PATH_PREFIXES = ['/login', '/register', '/reset-password'];
+const PUBLIC_PATH_PREFIXES = ['/login', '/register'];
 
 function stripLocalePrefix(pathname: string): string {
   for (const locale of routing.locales) {
