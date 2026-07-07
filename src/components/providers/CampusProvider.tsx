@@ -8,15 +8,14 @@ import {
   useState,
   type ReactNode
 } from 'react';
+import { isValidSite } from '@/lib/constants/sites';
 import type { CampusCode } from '@/types';
 
 const STORAGE_KEY = 'campus';
 const DEFAULT: CampusCode = 'SH';
 
-const ALL_CAMPUSES: CampusCode[] = ['SH', 'NY', 'AD'];
-
 function isCampus(v: string | null): v is CampusCode {
-  return v !== null && (ALL_CAMPUSES as string[]).includes(v);
+  return v !== null && isValidSite(v);
 }
 
 interface CampusContextValue {

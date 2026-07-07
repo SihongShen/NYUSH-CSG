@@ -1,22 +1,25 @@
 /**
- * NYU 全球 14 个 site。评价表单里的"校区"用这个列表。
- * 跟 CampusCode 不同：CampusCode 只覆盖 3 个学位校区，site 包括所有 study-away 地点。
+ * NYU 全球 16 个 site：3 个学位校区在前，13 个 study-away 按名称字母序。
+ * 全局校区切换（Navbar）、课程归属（home_campus）、评价 site 共用这个列表，
+ * 与 types/index.ts 的 CampusCode 保持同步。
  */
 export const SITES = [
   { code: 'SH',  name: 'Shanghai' },
   { code: 'NY',  name: 'New York' },
   { code: 'AD',  name: 'Abu Dhabi' },
-  { code: 'BUE', name: 'Buenos Aires' },
+  { code: 'ACC', name: 'Accra' },
   { code: 'BER', name: 'Berlin' },
+  { code: 'BUE', name: 'Buenos Aires' },
   { code: 'FLO', name: 'Florence' },
   { code: 'LON', name: 'London' },
+  { code: 'LA',  name: 'Los Angeles' },
   { code: 'MAD', name: 'Madrid' },
   { code: 'PAR', name: 'Paris' },
   { code: 'PRG', name: 'Prague' },
   { code: 'SYD', name: 'Sydney' },
   { code: 'TEL', name: 'Tel Aviv' },
-  { code: 'WAS', name: 'Washington DC' },
-  { code: 'ACC', name: 'Accra' }
+  { code: 'TUL', name: 'Tulsa' },
+  { code: 'WAS', name: 'Washington DC' }
 ] as const;
 
 export type SiteCode = (typeof SITES)[number]['code'];

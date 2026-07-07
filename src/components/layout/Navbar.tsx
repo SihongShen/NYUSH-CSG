@@ -26,15 +26,15 @@ import {
 import { cn } from '@/utils/cn';
 import { useCampus } from '@/components/providers/CampusProvider';
 import { createClient } from '@/utils/supabase-browser';
+import { SITES } from '@/lib/constants/sites';
 import type { CampusCode } from '@/types';
 import { LocaleSwitcher } from './LocaleSwitcher';
 
-// 校区显示名映射 —— code 列表跟 types/index.ts 的 CampusCode 一致
-const CAMPUSES: { code: CampusCode; name: string }[] = [
-  { code: 'SH', name: 'Shanghai' },
-  { code: 'NY', name: 'New York' },
-  { code: 'AD', name: 'Abu Dhabi' }
-];
+// 校区 = 16 个 NYU site（SITES 列表顺序：3 个学位校区在前，study-away 在后）
+const CAMPUSES: { code: CampusCode; name: string }[] = SITES.map((s) => ({
+  code: s.code,
+  name: s.name
+}));
 
 const ON_VIOLET_BTN =
   'text-white hover:bg-white/15 hover:text-white focus-visible:ring-white/40';
@@ -96,20 +96,26 @@ export function Navbar({ userEmail }: NavbarProps) {
                 <ChevronDown className="h-4 w-4 opacity-70" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-44">
+            <DropdownMenuContent
+              align="start"
+              className="max-h-96 w-44 overflow-y-auto"
+            >
               <DropdownMenuLabel className="text-xs text-muted-foreground">
                 {t('campus.switch')}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {CAMPUSES.map((c) => (
-                <DropdownMenuItem
-                  key={c.code}
-                  onClick={() => setCampus(c.code)}
-                  className="flex items-center justify-between"
-                >
-                  <span>{c.name}</span>
-                  {c.code === campus && <Check className="h-4 w-4" />}
-                </DropdownMenuItem>
+              {CAMPUSES.map((c, i) => (
+                <div key={c.code}>
+                  {/* 3 个学位校区和 study-away site 之间加分隔线 */}
+                  {i === 3 && <DropdownMenuSeparator />}
+                  <DropdownMenuItem
+                    onClick={() => setCampus(c.code)}
+                    className="flex items-center justify-between"
+                  >
+                    <span>{c.name}</span>
+                    {c.code === campus && <Check className="h-4 w-4" />}
+                  </DropdownMenuItem>
+                </div>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
