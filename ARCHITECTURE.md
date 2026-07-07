@@ -14,7 +14,7 @@
 
 ## 项目定位
 
-NYU Shanghai 课程评价与历史存档平台。半封闭式（仅限 @nyu.edu 邮箱注册），结构化评价，匿名发布。逻辑开源，支持其他高校 Fork 后修改 `config` 快速部署。
+NYU Shanghai 课程评价与历史存档平台。半封闭式（仅限 @nyu.edu Google 账号登录），结构化评价，匿名发布。逻辑开源，支持其他高校 Fork 后修改 `config` 快速部署。
 
 ---
 
@@ -27,7 +27,7 @@ NYU Shanghai 课程评价与历史存档平台。半封闭式（仅限 @nyu.edu 
 | UI 组件 | shadcn/ui + Tailwind CSS | shadcn 组件在 `src/components/ui/`，不手动修改 |
 | 后端 | Next.js API Routes | 所有后端逻辑在 `src/app/api/` |
 | 数据库 | Supabase (PostgreSQL) | 不使用 Prisma，直接用 Supabase JS 客户端 |
-| 认证 | Supabase Auth | Email + Password，邮箱验证激活 |
+| 认证 | Supabase Auth | Google OAuth（NYU Google Workspace 账号），服务端 hook 强制 @nyu.edu 域名 |
 | 部署 | Vercel | 连接 GitHub 自动部署 |
 
 ---
@@ -41,10 +41,10 @@ src/
 │
 ├── app/
 │   ├── [locale]/                       # i18n 国际化路由匹配，支持中英切换
-│   │   ├── (auth)/                     # 登录注册路由组，不需要登录态
-│   │   │   ├── login/page.tsx          # 登录 + 注册 tab 切换（UI 入口）
-│   │   │   ├── register/page.tsx       # 重定向到 /login（保留路由占位）
-│   │   │   └── reset-password/page.tsx # 重定向到 /login（MVP 暂不实现）
+│   │   ├── (auth)/                     # 登录路由组，不需要登录态
+│   │   │   ├── login/page.tsx          # Google OAuth 登录（唯一入口）
+│   │   │   ├── register/page.tsx       # 重定向到 /login（旧链接兼容）
+│   │   │   └── reset-password/page.tsx # 重定向到 /login（旧链接兼容）
 │   │   │
 │   │   ├── (main)/                     # 登录后才能访问，middleware 统一守卫
 │   │   │   ├── page.tsx                # 首页 / 课程搜索
@@ -59,8 +59,7 @@ src/
 │   │
 │   └── api/                            # 后端 API，不经过 i18n 路由，前端只能通过这里访问数据库
 │       ├── auth/
-│       │   ├── register/route.ts       # 邮箱后缀校验 + 调用 Supabase 注册
-│       │   └── callback/route.ts       # Supabase Auth 邮箱验证回调
+│       │   └── callback/route.ts       # OAuth 回调：exchangeCodeForSession + 域名双保险
 │       ├── courses/
 │       │   ├── route.ts                # GET 搜索课程 / POST 申请新课
 │       │   └── [id]/route.ts          # GET 课程详情（含教授列表）
@@ -77,8 +76,7 @@ src/
 │   │   ├── label.tsx
 │   │   └── tabs.tsx
 │   ├── auth/
-│   │   ├── LoginForm.tsx               # netid + 密码，直接调用 supabase-browser
-│   │   └── RegisterForm.tsx            # netid + 密码 + 确认密码，POST /api/auth/register
+│   │   └── LoginForm.tsx               # Google OAuth 按钮，调用 signInWithOAuth（hd=nyu.edu）
 │   ├── course/
 │   │   ├── CourseCard.tsx
 │   │   ├── CourseSearch.tsx
@@ -96,10 +94,9 @@ src/
 │   │   ├── supabase.ts                 # 两个工厂：createClient()（anon + cookies，遵守 RLS）
 │   │   │                               #          createAdminClient()（service_role，绕过 RLS）
 │   │   ├── courses.ts                  # 课程相关数据库查询函数
-│   │   ├── reviews.ts                  # 评价相关数据库查询函数
-│   │   └── users.ts                    # 用户查询，含 anonymous_id 生成逻辑
+│   │   └── reviews.ts                  # 评价相关数据库查询函数
 │   └── auth/
-│       ├── validate.ts                 # NetID + 邮箱 + 密码校验
+│       ├── validate.ts                 # 邮箱域名校验（仅限 @nyu.edu）
 │       └── session.ts                  # getUser() / requireUser()
 │
 ├── hooks/                              # 前端 React hooks，只调用 /api/ 路由
@@ -190,16 +187,22 @@ created_at    timestamptz DEFAULT now()
 
 **courses**
 ```sql
-id            uuid  PK
-code          text  NOT NULL         -- 如 "CSCI-SHU 101"
-name_en       text  NOT NULL
-category      text                   -- 'Core' / 'Major' / 'Elective'
-core_type     text                   -- 'GPS' / 'PoH' / 'IPC' / 'WAI' / 'ED' / 'STS' / 'AT' / 'EAP'
-                                     -- category = 'Core' 时填，否则 null
-department    text                   -- 'CS' / 'IMA' / 'ECON' 等，Core 课留 null
-is_verified   boolean DEFAULT true   -- 字段为未来审核流程预留；MVP 默认 true，不在 RLS 中过滤
-equivalent_id uuid  FK → courses(id) -- 自引用，海外课程指向上海等同课程（MVP 不实现）
-created_at    timestamptz DEFAULT now()
+id                  uuid    PK
+code                text    NOT NULL       -- 如 "CSCI-SHU 101"
+name_en             text    NOT NULL
+home_campus         text    NOT NULL DEFAULT 'SH'  -- 'SH' / 'NY' / 'AD'
+major_required      text[]  NOT NULL DEFAULT '{}'  -- 主修必修课的 major 列表
+major_elective      text[]  NOT NULL DEFAULT '{}'  -- 主修选修课的 major 列表
+minor               text[]  NOT NULL DEFAULT '{}'  -- minor 项目列表
+core_type           text[]  NOT NULL DEFAULT '{}'  -- 核心课程子类（GPS / PoH / WAI 等）
+is_general_elective boolean NOT NULL DEFAULT false -- 通识选修标记
+is_verified         boolean DEFAULT true   -- 字段为未来审核流程预留；MVP 默认 true，不在 RLS 中过滤
+equivalent_id       uuid    FK → courses(id) -- 自引用，海外课程指向上海等同课程（MVP 不实现）
+created_at          timestamptz DEFAULT now()
+
+UNIQUE (home_campus, code)
+-- 一门课可同时归属多个 major + 多个 core_type。
+-- 筛选逻辑：同维度内 OR，跨维度 AND；Major 筛选时 required ∪ elective 一起匹配。
 ```
 
 **professors**
@@ -223,16 +226,15 @@ user_id      uuid  FK → users(id)
 course_id    uuid  FK → courses(id)
 professor_id uuid  FK → professors(id)
 semester     text  NOT NULL  -- 格式："2024 Fall" / "2025 Spring"
-site         text  NOT NULL  -- "SH" / "NY" / "AD" 等
-rating       int2  NOT NULL  CHECK (rating BETWEEN 1 AND 5)
-difficulty   int2  NOT NULL  CHECK (difficulty BETWEEN 1 AND 5)
-workload     int2  NOT NULL  CHECK (workload BETWEEN 1 AND 5)
+site         text  NOT NULL  -- 自动取 course.home_campus，不接受前端传值
 content_zh   text            -- 与 content_en 至少一个不为空（应用层校验）
 content_en   text
 is_visible   boolean DEFAULT true  -- 软删除字段
 created_at   timestamptz DEFAULT now()
 
 UNIQUE (user_id, course_id, professor_id, semester)
+-- rating / difficulty / workload 已在 20260528000003 移除（MVP 不做量化指标，
+-- 未来加回时新写 migration ADD COLUMN）
 ```
 
 **sites**（扩展表，MVP 不使用）
@@ -244,60 +246,51 @@ code  text  UNIQUE    -- "SHA"
 
 ### RLS 策略
 
-```sql
--- 任何人可读已发布评价
-CREATE POLICY "public read visible reviews"
-ON reviews FOR SELECT USING (is_visible = true);
+完整定义见 `supabase/migrations/20260521000001_enable_rls.sql`，要点：
 
--- 本人可读自己所有评价（含已删除）
-CREATE POLICY "users read own reviews"
-ON reviews FOR SELECT USING (auth.uid() = user_id);
-
--- 本人可修改 / 软删除自己的评价
-CREATE POLICY "users update own reviews"
-ON reviews FOR UPDATE
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
-```
+- **users**：只能 SELECT 自己一行；所有写操作禁用，由 `handle_new_auth_user` 触发器同步写入（含 anonymous_id 生成 + 碰撞重试）
+- **courses / professors / course_professor / sites**：authenticated 可读；courses / professors / course_professor 可 INSERT；不开 UPDATE / DELETE
+- **reviews**：authenticated 可读 `is_visible = true` 的或本人的（含软删）；只能 INSERT / UPDATE 自己的；不开 DELETE（真删被数据库拒绝，软删走 UPDATE is_visible）
+- **auth hook**：`hook_before_user_created` 在用户创建前拒绝非 @nyu.edu 邮箱（20260707000002）
 
 ---
 
 ## 认证流程
 
+**方式：Google OAuth，仅限 NYU Google Workspace 账号（@nyu.edu）。**
+无邮箱验证、无密码、无注册表单——「用 NYU 账号登录成功」本身就是身份证明。
+
 ### 登录页 UX
-- 单一入口 `/login`，登录和注册用 shadcn `Tabs` 切换
-- NetID 输入框右侧固定显示 `@nyu.edu`（不可编辑）
-- 前端 `lib/auth/validate.ts` 校验：
-  - NetID 格式：`^[a-zA-Z][a-zA-Z0-9]{1,14}$`（字母开头，2–15 位字母数字）
-  - 密码长度 ≥ 8
-  - 注册需"确认密码"匹配
-- `/register` 和 `/reset-password` 是占位重定向，会跳到 `/login`
+- 单一入口 `/login`，一个「使用 NYU 谷歌账号登录」按钮
+- `/register` 和 `/reset-password` 是旧链接兼容重定向，会跳到 `/login`
+- 回调失败时带 `?error=auth`（授权失败）或 `?error=domain`（非 NYU 账号）跳回 `/login`，`LoginForm` 负责翻译显示
 
-### 注册
-1. `RegisterForm` 提交 netid + 密码（前端先做格式校验）
-2. `POST /api/auth/register`，body 是 `{ netid, password }`
-3. 后端 `lib/auth/validate.ts` 再次校验，拼出 `${netid}@nyu.edu` 并复核域名
-4. 调用 `supabase.auth.signUp()`，`emailRedirectTo` 指向 `/api/auth/callback`
-5. Supabase 发送验证邮件
-6. 用户点击邮件链接 → `/api/auth/callback` 调用 `exchangeCodeForSession` → 重定向到 `/`
-7. 数据库触发器自动生成 `anonymous_id` 并写入 `users` 表
+### 登录 / 首次注册（同一条流程）
+1. `LoginForm` 调用 `supabase.auth.signInWithOAuth({ provider: 'google' })`，
+   `queryParams` 带 `hd: 'nyu.edu'`（Google 账号选择页只显示 NYU 账号——仅为 UX 提示，不作为安全防线）
+2. 用户在 Google 完成授权 → Google 重定向到 Supabase `/auth/v1/callback`
+3. 首次登录时 Supabase 创建用户，此前 `hook_before_user_created`（服务端强制）拒绝非 @nyu.edu 邮箱；
+   数据库触发器 `handle_new_auth_user` 自动生成 `anonymous_id` 写入 `users` 表
+4. Supabase 重定向到 `/api/auth/callback?code=...` → `exchangeCodeForSession` 换 session 写入 cookie
+5. callback 应用层再校验一次邮箱域名（双保险），不合规 signOut 并跳 `/login?error=domain`
+6. 成功 → 重定向到 `/`；`src/middleware.ts` 后续请求验证 session，未登录访问受保护路由统一跳 `/login`
 
-### 登录
-1. `LoginForm` 提交 netid + 密码（前端先做格式校验）
-2. 前端直接调用 `supabase.auth.signInWithPassword()`，邮箱由 netid 拼接
-3. `@supabase/ssr` 把 session 写入 cookie
-4. `router.replace('/')` + `router.refresh()` 跳到首页
-5. `src/middleware.ts` 后续请求验证 session；未登录访问受保护路由统一跳 `/login`
+### 域名限制的三层防线
+| 层 | 位置 | 性质 |
+|----|------|------|
+| `hd=nyu.edu` | 前端 OAuth 参数 | UX 提示，可被绕过 |
+| `hook_before_user_created` | Supabase Auth 服务端 | **强制**，拒绝创建非 NYU 用户 |
+| `users.email` CHECK 约束 + callback 校验 | 数据库 / 应用层 | 兜底 |
 
 ---
 
 ## MVP 功能范围
 
 ### 包含
-- 邮箱注册 / 登录 / 重置密码
+- NYU Google 账号登录（OAuth，无密码体系）
 - 课程搜索（按课程编号、名称、教授名）
 - 课程详情页（显示该课所有评价）
-- 写评价（rating / difficulty / workload / 文字内容 / 学期 / 校区）
+- 写评价（文字内容中/英 / 教授 / 学期；校区自动取课程 home_campus，无量化评分）
 - 修改评价
 - 我的评价页（查看 + 软删除）
 - 匿名 ID 显示（不显示真实邮箱）
@@ -318,8 +311,15 @@ WITH CHECK (auth.uid() = user_id);
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key   # 绝不暴露给前端
-RESEND_API_KEY=                                    # MVP 阶段留空，用 Supabase 自带 SMTP
+
+# Google OAuth（供 supabase CLI config.toml env() 替换；云端在 Dashboard 配）
+SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=your_google_oauth_client_id
+SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=your_google_oauth_client_secret
 ```
+
+Google Cloud Console 侧：OAuth Client（Web application）的 Authorized redirect URI
+本地填 `http://127.0.0.1:54321/auth/v1/callback`，生产填
+`https://<project-ref>.supabase.co/auth/v1/callback`。
 
 ---
 

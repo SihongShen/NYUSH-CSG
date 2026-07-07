@@ -123,27 +123,26 @@ export async function getReviews(courseId: string) {
 }
 ```
 
-### 登录页 UX 约定
+### 认证约定（Google OAuth，仅限 @nyu.edu）
 
-- 唯一入口 `/login`，登录和注册用 `<Tabs>` 切换（不是分两个独立路由）
-- NetID 输入框 + 固定后缀 `@nyu.edu`（用 flex 布局把后缀放右侧）
-- 校验函数都在 `src/lib/auth/validate.ts`：
-  - `isValidNetId(netid)` — 字母开头，2–15 位字母数字
-  - `isValidPassword(pwd)` — 至少 8 位
-  - `buildEmail(netid)` — 拼成 `<netid>@nyu.edu`
-  - `isAllowedEmail(email)` — 后端再次复核 @nyu.edu 后缀
-- 登录走前端 supabase 客户端；注册走 `POST /api/auth/register`（后端必须再校验一次邮箱后缀，前端校验可绕过）
-- `/register` 和 `/reset-password` 路由保留为重定向到 `/login`
+- 唯一入口 `/login`，一个 Google 登录按钮；**无注册表单、无密码体系、无验证邮件**
+- 登录走前端 `supabase.auth.signInWithOAuth({ provider: 'google' })`，
+  `queryParams` 带 `hd: 'nyu.edu'`（UX 提示，非安全防线）
+- 域名强制在服务端：Supabase auth hook `hook_before_user_created` 拒绝非 @nyu.edu；
+  `GET /api/auth/callback` 应用层再校验一次（`isAllowedEmail`，在 `src/lib/auth/validate.ts`）
+- 回调失败跳 `/login?error=auth` 或 `/login?error=domain`，`LoginForm` 读 query 显示错误
+- `/register` 和 `/reset-password` 路由保留为重定向到 `/login`（旧链接兼容）
+- 首次登录自动建用户，数据库触发器生成 `anonymous_id`
 
 ## 数据库表速查
 
 | 表名 | 主要字段 | 备注 |
 |------|---------|------|
 | users | id, email, anonymous_id, role | anonymous_id 是前端唯一可见身份 |
-| courses | id, code, name_en, name_zh, category, department, is_verified | category / department 是 MVP 筛选字段 |
+| courses | id, code, name_en, home_campus, major_required[], major_elective[], minor[], core_type[], is_general_elective, is_verified | UNIQUE (home_campus, code)；数组字段是筛选维度 |
 | professors | id, name_en, is_verified | 保持最简 |
 | course_professor | course_id, professor_id | 多对多中间表 |
-| reviews | id, user_id, course_id, professor_id, semester, site, rating, difficulty, workload, content_zh, content_en, is_visible | is_visible=false 为软删除 |
+| reviews | id, user_id, course_id, professor_id, semester, site, content_zh, content_en, is_visible | is_visible=false 为软删除；UNIQUE (user_id, course_id, professor_id, semester) |
 | sites | id, name, code | MVP 不使用，字段预留 |
 
 ## 已知的扩展字段（现在不实现，不要填充逻辑）
@@ -152,12 +151,10 @@ export async function getReviews(courseId: string) {
 
 ## 校验规则
 
-- NetID 格式：`^[a-zA-Z][a-zA-Z0-9]{1,14}$`（字母开头，2–15 位字母数字）
-- 邮箱必须以 `@nyu.edu` 结尾，前端拼接 + 后端 `POST /api/auth/register` 复核
-- 密码至少 8 位（`MIN_PASSWORD_LENGTH` 常量在 `lib/auth/validate.ts`）
-- `reviews` 的 `content_zh` 和 `content_en` 至少一个不为空，在前端 `ReviewForm` 里校验
-- `rating / difficulty / workload` 都是 1-5 整数
-- `semester` 格式为 `"2024 Fall"` 或 `"2025 Spring"`
+- 邮箱必须以 `@nyu.edu` 结尾：服务端 auth hook 强制 + callback `isAllowedEmail()` 复核（`lib/auth/validate.ts`）
+- `reviews` 的 `content_zh` 和 `content_en` 至少一个不为空，前端 `ReviewForm` 校验 + API 层复核
+- `semester` 格式为 `"2024 Fall"` / `"2025 Spring"` / `"2025 Summer"` / `"2025 January"`（`lib/constants/semesters.ts`）
+- `site` 不接受前端传值，后端自动取 `course.home_campus`
 
 ## 软删除规则
 

@@ -8,34 +8,31 @@
 
 ---
 
-## 1. `/login` — 登录 / 注册
+## 1. `/login` — 登录（Google OAuth）
 
 **入口**：未登录访问任何路由会被 [middleware](src/middleware.ts) 重定向到这里。
 
-**主要 UI**：单卡片居中，shadcn `Tabs` 切换"登录 / 注册"。NetID 输入框右侧固定显示 `@nyu.edu`。
-
-**字段 / 校验**（见 [src/lib/auth/validate.ts](src/lib/auth/validate.ts)）：
-- NetID：`^[a-zA-Z][a-zA-Z0-9]{1,14}$`
-- 密码：≥ 8 位
-- 注册需"确认密码"匹配
+**主要 UI**：单卡片居中，一个「使用 NYU 谷歌账号登录」按钮 + "仅限 @nyu.edu 账号登录"提示。
+无注册 tab、无密码字段——登录即注册（首次登录自动建用户）。
 
 **关键交互**：
-- 登录成功 → `router.replace('/')` → middleware 放行进首页
-- 注册成功 → 留在 `/login`，提示"请去邮箱完成验证"，**不**自动登录（Supabase 邮箱验证流程）
+- 点按钮 → `supabase.auth.signInWithOAuth({ provider: 'google' })`（带 `hd=nyu.edu`）→ 整页跳转 Google 授权
+- 授权成功 → Google → Supabase → `GET /api/auth/callback` → 重定向到 `/`
+- 回调失败 → 跳回 `/login?error=auth`（授权失败）或 `/login?error=domain`（非 NYU 账号），`LoginForm` 读 query 显示对应 `Alert`
+- `/register` 和 `/reset-password` 是旧链接兼容重定向，会跳到 `/login`
+
+**域名限制**：`hd` 参数只是 UX 提示；强制校验在服务端 `hook_before_user_created`（拒绝非 @nyu.edu），callback 应用层再校验一次兜底。
 
 **调用的 API**：
-- 登录：前端 `supabase.auth.signInWithPassword()`（不走 `/api`）
-- 注册：`POST /api/auth/register`
-- 邮箱回调：`GET /api/auth/callback`
+- 登录：前端 `supabase.auth.signInWithOAuth()`（不走 `/api`）
+- OAuth 回调：`GET /api/auth/callback`
 
 **空·错·加载状态**：
-- 表单校验失败：字段下方红字
-- 登录失败：`Alert` 显示"邮箱或密码错误"
-- 提交中：按钮 disabled + 文字变"登录中…"
+- 发起跳转失败 / 回调报错：`Alert` 显示"登录失败，请重试"或"仅限 @nyu.edu 账号登录"
+- 跳转中：按钮 disabled + 文字变"跳转中…"
 
 **待决问题**：
-- [ ] 注册成功后要不要把 NetID 自动填到登录 tab？
-- [ ] 找回密码（`reset-password` 路由目前只是占位重定向，MVP 是否要做？）
+- [ ] 登录按钮要不要加 Google logo（需内联 SVG，避免外链资源）？
 
 ---
 
@@ -52,16 +49,19 @@
 - 单个输入框，模糊匹配 `code` OR `name_en`（ILIKE 在后端做）
 - 输入触发 300ms debounce 后调 API
 
-**筛选**（多选 checkbox，**同维度 OR、跨维度 AND**）：
-- **Category**：☐ Core ☐ Major Requirement ☐ Elective
-- **Department**：☐ CS ☐ IMA ☐ ECON …（从已有课程动态生成 distinct 列表，前端缓存）
+**筛选**（多选 checkbox，**同维度 OR、跨维度 AND**；Major 筛选时 required ∪ elective 一起匹配）：
+- **Major**（主修，required + elective 合并匹配）
+- **Minor**
+- **Core**（GPS / PoH / WAI 等子类）
+- **General Elective**（单个开关）
+- 校区由 Navbar 的 CampusProvider 全局切换（SH / NY / AD），不在筛选面板里
 
-筛选状态同步到 URL query（如 `/?q=CSCI&category=Core,Major&department=CS`），方便分享 / 浏览器后退。
+筛选状态同步到 URL query（如 `/?q=CSCI&major=CS,DS&core=GPS`），方便分享 / 浏览器后退。
 
 **课程卡片显示**：
 - 大字：`code`
 - 副标题：`name_en`
-- Badge：category / department
+- Badge：major / minor / core_type / GE 分类
 - 角标：评价数（若 = 0 显示 "暂无评价"）
 - 点击 → `/courses/[id]`
 
@@ -70,7 +70,7 @@
 - 没搜出结果且无筛选 → 提示"没找到这门课，[申请添加]"（链接到申请新课流程，MVP 决定后填）
 
 **调用的 API**：
-- `GET /api/courses?q=&category=&department=&limit=20&offset=0`
+- `GET /api/courses?q=&campus=&major=&minor=&core=&ge=&limit=20&offset=0`
 - 滚动到底翻页（offset 累加；或简单先 "加载更多" 按钮，看实现成本）
 
 **空·错·加载状态**：
@@ -92,7 +92,7 @@
 
 **主要 UI**（从上到下三段）：
 
-1. **课程信息区**：返回按钮、`code` 大标题、`name_en`、category / department / core_type badge、教授列表、平均评分 + 评价总数
+1. **课程信息区**：返回按钮、`code` 大标题、`name_en`、major / minor / core_type / GE badge、教授列表、评价总数（无量化评分）
 2. **评价列表区**：见下方"排序"
 3. **写评价区**：见下方"写评价"
 
@@ -107,11 +107,11 @@
 - 用户**已写过** → 写评价区不显示（要修改去置顶那条点 [编辑]）
 
 **评价表单字段 / 校验**（写和编辑共用，编辑预填）：
-- **教授** dropdown，单选：来源该课程关联的教授列表
-- **学期** dropdown，单选：前端生成最近 4 学期（如 `2026 Spring` / `2025 Fall` / `2025 Spring` / `2024 Fall`）
-- **校区** dropdown，单选：14 个 NYU site（参考 `lib/constants/sites.ts`，待建）
-- **rating / difficulty / workload**：1–5 星点击，均必填
-- **评价内容**：tab 切中文 / 英文，**至少一个非空**
+- **教授** dropdown，单选：来源该课程关联的教授列表；也可选"新教授"填 `new_professor_name`（后端 find-or-create 并关联到课程）
+- **学期**：年份 + 季节两个 dropdown（Fall / Spring / Summer / January）
+- **校区**：不需要填——后端自动取 `course.home_campus`，不接受前端传值
+- **评价内容**：中文 / 英文两栏，**至少一个非空**
+- rating / difficulty / workload 量化指标已移除（MVP 只做文字评价，未来可能加回）
 
 **关键交互**：
 - 写评价 inline 表单：提交成功 → 表单收起 + 新评价插入到列表置顶位置 + toast 成功
@@ -150,7 +150,6 @@
 **每条评价显示**：
 - 课程 code + name（点击跳 `/courses/[id]` 并自动滚到自己评价）
 - 教授 / 学期 / 校区
-- ★ rating / 难度 / 工作量
 - 评价内容前 200 字 + "…"
 - 右上角：[编辑] / [删除]
 - 已软删：整条标灰 + "已删除（仅自己可见）"标签 + [恢复] 按钮

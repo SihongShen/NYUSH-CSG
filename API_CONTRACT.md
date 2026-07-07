@@ -31,22 +31,20 @@
 
 ## Auth
 
-### `POST /api/auth/register`
-**Auth**: 公开  
-**Body**: [`RegisterPayload`](src/types/index.ts) `{ netid, password }`  
-**200**: `{ ok: true }`  
-**400**: error ∈ `invalidNetid` / `passwordTooShort` / `emailNotAllowed` / Supabase 原始消息  
-**业务规则**:
-- netid 格式 `^[a-zA-Z][a-zA-Z0-9]{1,14}$`，密码 ≥ 8 位（`lib/auth/validate.ts`）
-- 后端拼出 `${netid}@nyu.edu` 后再次复核域名（前端校验可绕过）
-- 调用 `supabase.auth.signUp`，`emailRedirectTo` 指向 `/api/auth/callback`
-- Supabase 异步发验证邮件；用户点链接后才真正激活
+认证方式：**Google OAuth（仅限 @nyu.edu 账号）**。无注册 / 密码 / 重置密码接口——
+前端直接调 `supabase.auth.signInWithOAuth({ provider: 'google' })`，首次登录自动建用户。
+域名限制由 Supabase 服务端 `hook_before_user_created` 强制（拒绝非 @nyu.edu）。
 
 ### `GET /api/auth/callback?code=...`
-**Auth**: 公开（Supabase 回调）  
+**Auth**: 公开（OAuth 回调）  
 **Query**: `code` (string) — Supabase 发过来的一次性 code  
-**302**: 重定向到 `/`  
-**行为**: 调用 `exchangeCodeForSession(code)`，session cookie 写入浏览器
+**302 成功**: 重定向到 `/`（`exchangeCodeForSession` 把 session cookie 写入浏览器）  
+**302 失败**: 重定向到 `/login?error=auth`（无 code / 交换失败）或 `/login?error=domain`（非 @nyu.edu 账号，session 已被 signOut）
+
+### `GET /api/me`
+**Auth**: 需要登录  
+**200**: `{ id, email, anonymous_id }` — 当前用户基本信息（profile 页用）  
+**401**: `unauthorized`
 
 ---
 
@@ -54,22 +52,24 @@
 
 ### `GET /api/courses`
 **Auth**: 需要登录  
-**Query**: [`CourseSearchQuery`](src/types/index.ts) `{ q?, category?, department?, limit?, offset? }`  
+**Query**: `{ q?, campus?, major?, minor?, core?, ge?, limit?, offset? }`
+（`major` / `minor` / `core` 为逗号分隔多值；`ge=1` 表示只看通识选修；`campus` ∈ SH / NY / AD）  
 **200**: `Paginated<Course>` — `{ items: Course[], total, limit, offset }`  
 **业务规则**:
 - 返回所有课程（MVP 不做审核过滤；`is_verified` 字段保留供未来扩展）
-- `q` 模糊匹配 `code` / `name_en` / 关联教授名（ILIKE）
-- TODO: 教授名联表查询的具体写法 —— 用 `lib/db/courses.ts` 封装
+- `q` 模糊匹配 `code` / `name_en`（ILIKE，特殊字符已转义）
+- 筛选：同维度 OR、跨维度 AND；Major 匹配 `major_required ∪ major_elective`
+- 默认排序 `code ASC`；`limit` 上限 100
 
 ### `POST /api/courses`
 **Auth**: 需要登录  
-**Body**: [`CourseApplyPayload`](src/types/index.ts) `{ code, name_en, category?, core_type?, department?, professor_names[] }`  
+**Body**: [`CourseApplyPayload`](src/types/index.ts) `{ code, name_en, home_campus, major_required[], major_elective[], minor[], core_type[], is_general_elective, lecture_professors[], recitation_tas[] }`  
 **201**: `{ id }` — 新建课程 ID（MVP 立即可见）  
-**400**: `validation`（`code` / `name_en` 缺失，`category=Core` 时必须有 `core_type`）  
-**409**: `conflict`（同 `code` + 同 `professor_names` 组合已存在）  
+**400**: `validation`（`code` 缺失 / `name_en` < 3 字符 / 校区不合法 / 无任何分类 / 无 lecture 教授），详见 `fields`  
+**409**: `duplicate_code` + `existing_id`（同校区同 `code` 已存在；应用层查重 + DB 唯一索引兜底并发）  
 **业务规则**:
 - MVP 阶段新建课程立即可见，不做审核
-- 同名教授若不存在则同时创建
+- lecture + recitation 教授合并去重，同名教授若不存在则同时创建并关联
 
 ### `GET /api/courses/[id]`
 **Auth**: 需要登录  
@@ -83,45 +83,43 @@
 
 ### `GET /api/reviews`
 **Auth**: 需要登录  
-**Query**: [`ReviewListQuery`](src/types/index.ts) `{ course_id?, professor_id?, user_id?, limit?, offset? }`  
-**200**: `Paginated<ReviewWithAuthor>`  
-**403**: 当 `user_id` 不等于当前登录用户（不允许看别人"我的评价"）  
+**Query**: `?course_id=<uuid>`（一门课的评价）或 `?user_id=me`（当前用户所有评价，含软删）  
+**200**: `{ items: ReviewWithAuthor[] }`（course_id 分支）/ `{ items: ReviewWithCourse[] }`（user_id=me 分支，带课程 code / name）  
+**400**: `course_id_required`（两个参数都没给）  
+**401**: `unauthorized`（`user_id=me` 但未登录）  
 **业务规则**:
-- 默认只返回 `is_visible = true` 的评价
-- 当 `user_id = 当前用户` 时，也返回 `is_visible = false`（用户自己软删的）
+- 可见性由 RLS 控制：`is_visible = true` 的或本人的（含软删）
+- 作者以 `author_anonymous_id` 显示（`get_anonymous_id()` 函数反查，不泄露邮箱）
 - 排序：`created_at DESC`
 
 ### `POST /api/reviews`
 **Auth**: 需要登录  
-**Body**: [`ReviewCreatePayload`](src/types/index.ts)  
+**Body**: [`ReviewCreatePayload`](src/types/index.ts) `{ course_id, professor_id? | new_professor_name?, semester, content_zh?, content_en? }`  
 **201**: `{ id }`  
-**400**: `validation`（详见下方业务规则）  
-**409**: `conflict` — `UNIQUE (user_id, course_id, professor_id, semester)` 撞库  
+**400**: `validation`（详见 `fields`）  
+**404**: `course_not_found`  
+**409**: `duplicate` — `UNIQUE (user_id, course_id, professor_id, semester)` 撞库  
 **业务规则**:
-- `rating` / `difficulty` / `workload` 均为 1-5 整数
+- `professor_id` 和 `new_professor_name` 二选一必填；新教授名走 find-or-create 并关联到课程
 - `content_zh` 和 `content_en` 至少一个非空非纯空白
 - `semester` 格式 `"YYYY Fall"` / `"YYYY Spring"` / `"YYYY Summer"` / `"YYYY January"`
-- `site` 当前用枚举 `'SH' | 'NY' | 'AD' | 'BUE' | 'BER' | 'FLO' | 'LON' | 'MAD' | 'PAR' | 'PRG' | 'SYD' | 'TEL' | 'WAS' | 'ACC'`（先放在校验函数里，不入库为枚举）
+- `site` 不接受前端传值，自动取 `course.home_campus`
 - `user_id` 强制取 session 用户，不接受前端传
 
 ### `PATCH /api/reviews/[id]`
 **Auth**: 需要登录 + 评价归属本人  
 **Params**: `id` (uuid)  
-**Body**: [`ReviewUpdatePayload`](src/types/index.ts) — 只允许改 `rating` / `difficulty` / `workload` / `content_zh` / `content_en`  
-**200**: `Review` — 更新后完整对象  
-**403**: 评价不属于当前用户  
-**404**: 评价不存在或已软删除  
+**Body**（三种操作互斥，按 body 内容分发）:
+- `{ is_visible: false }` → 软删
+- `{ is_visible: true }` → 恢复
+- `{ content_zh?, content_en? }` → 改内容（至少一个非空）
+
+**200**: `{ ok: true }`  
+**400**: `validation`（改内容时两个都为空）  
+**404**: `not_found`（评价不存在或不属于当前用户——按更新行数判断，0 行即 404）  
 **业务规则**:
 - 不允许改 `course_id` / `professor_id` / `semester` / `site`（要改就删了重发）
-- 服务端再次校验 content 非空规则
-
-### `DELETE /api/reviews/[id]`
-**Auth**: 需要登录 + 评价归属本人  
-**Params**: `id` (uuid)  
-**200**: `{ ok: true }`  
-**403**: 评价不属于当前用户  
-**404**: 评价不存在  
-**业务规则**: **软删除** — `UPDATE reviews SET is_visible = false WHERE id = ? AND user_id = ?`，不真删行
+- 没有 `DELETE` 接口：真删被 RLS 拒绝，删除一律走软删（`is_visible=false`）
 
 ---
 
