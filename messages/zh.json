@@ -38,6 +38,16 @@
     "hints": {
       "nyuOnly": "仅限 @nyu.edu 账号登录"
     },
+    "features": {
+      "anonymous": "匿名评价",
+      "campuses": "16 个校区",
+      "equivalents": "等同课聚合"
+    },
+    "credit": {
+      "prefix": "感谢历届同学共同维护的",
+      "linkText": "选课指南原文档",
+      "suffix": "，本站在其基础上延续与存档"
+    },
     "errors": {
       "loginFailed": "登录失败，请重试",
       "domainNotAllowed": "仅限 @nyu.edu 账号登录，请选择你的 NYU 账号"
