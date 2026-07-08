@@ -1,7 +1,9 @@
-# Copilot 上下文文档
+# Agent 上下文文档
 
-> 把这个文件的内容粘贴到 Cursor 的 `.cursorrules`，或者在 GitHub Copilot Chat 里用 `#file` 引用它。
-> 每次让 AI 生成代码前先引用这个文件。
+> 本文件是给**所有 AI 编码助手**（Claude Code / Cursor / Copilot / Codex 等）的项目上下文速查。
+> 生成代码前先完整读一遍；架构决策的权威来源是 [ARCHITECTURE.md](ARCHITECTURE.md)，
+> 接口契约见 [API_CONTRACT.md](API_CONTRACT.md)，页面行为见 [FEATURES.md](FEATURES.md)。
+> 接入方式：Claude Code 经由 CLAUDE.md 自动引用；Cursor 粘贴进 `.cursorrules`；Copilot Chat 用 `#file` 引用。
 
 ---
 
@@ -114,9 +116,8 @@ export async function getReviews(courseId: string) {
   const supabase = await createClient()  // 注意 await
   const { data, error } = await supabase
     .from('reviews')
-    .select('*, users(anonymous_id), professors(name_en)')
-    .eq('course_id', courseId)
-    .eq('is_visible', true)
+    .select('*, professors(id, name_en)')   // users 表被 RLS 锁死不能 join，
+    .eq('course_id', courseId)              // 作者匿名 ID 用 rpc('get_anonymous_id') 反查
     .order('created_at', { ascending: false })
   if (error) throw error
   return data
@@ -144,6 +145,7 @@ export async function getReviews(courseId: string) {
 | course_professor | course_id, professor_id | 多对多中间表 |
 | reviews | id, user_id, course_id, professor_id, semester, site, content_zh, content_en, is_visible | is_visible=false 为软删除；UNIQUE (user_id, course_id, professor_id, semester) |
 | review_votes | review_id, user_id, vote(±1) | PK (review_id, user_id)，每人每评价一票 |
+| course_search（视图） | courses.* + review_count | 课程列表查询用；等同组合并计数，security_invoker，可按评价数排序 |
 | sites | id, name, code | MVP 不使用；site 枚举在 lib/constants/sites.ts（16 个） |
 
 ## 已知的扩展字段（现在不实现，不要填充逻辑）
@@ -155,6 +157,9 @@ export async function getReviews(courseId: string) {
 
 - 邮箱必须以 `@nyu.edu` 结尾：服务端 auth hook 强制 + callback `isAllowedEmail()` 复核（`lib/auth/validate.ts`）
 - `reviews` 的 `content_zh` 和 `content_en` 至少一个不为空，前端 `ReviewForm` 校验 + API 层复核
+- 评价内容长度：合计（trim 后）≥ 30 字符、单栏 ≤ 5000——规则和校验函数在 `lib/constants/reviews.ts`，前后端共用
+- 匿名 ID 重置走 `POST /api/me/anonymous-id` → `rpc('reset_anonymous_id')`（users 表禁直写）
+- 课程详情 `GET /api/courses/[id]` 合并返回 `reviews[]`，前端详情页只发一个请求（useCourse）
 - `semester` 格式为 `"2024 Fall"` / `"2025 Spring"` / `"2025 Summer"` / `"2025 January"`（`lib/constants/semesters.ts`）
 - 校区（`CampusCode`）= 16 个 NYU site，全局由 Navbar 切换（CampusProvider）；课程 `home_campus`、评价 `site` 都用它；site code 展示用 `siteName()`（`lib/constants/sites.ts`）
 - `GET /api/courses` 的 items 是 `CourseWithStats`（多一个 `review_count`，等同课组合并计数）

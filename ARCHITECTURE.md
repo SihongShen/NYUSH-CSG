@@ -7,7 +7,7 @@
 > 配套文档：
 > - **[FEATURES.md](FEATURES.md)** — 前端功能规约（每个页面的 UI / 字段 / 交互 / API 调用）
 > - **[API_CONTRACT.md](API_CONTRACT.md)** — 接口请求/响应契约，类型见 `src/types/index.ts`
-> - **[COPILOT_CONTEXT.md](COPILOT_CONTEXT.md)** — 给 AI 工具的编码模式速查
+> - **[AGENT_CONTEXT.md](AGENT_CONTEXT.md)** — 给所有 AI 编码助手的编码模式速查（CLAUDE.md 指向它）
 > - **[supabase/README.md](supabase/README.md)** — 数据库工作流（Supabase CLI / migration / RLS 测试）
 
 ---
@@ -46,10 +46,8 @@ src/
 │   │   │   └── register/page.tsx       # 重定向到 /login（旧链接兼容）
 │   │   │
 │   │   ├── (main)/                     # 登录后才能访问，middleware 统一守卫
-│   │   │   ├── page.tsx                # 首页 / 课程搜索
-│   │   │   ├── courses/[id]/page.tsx   # 课程详情 + 评价列表
-│   │   │   ├── reviews/new/page.tsx    # 写评价
-│   │   │   ├── reviews/[id]/edit/page.tsx
+│   │   │   ├── page.tsx                # 首页 / 课程搜索（含添加课程弹窗）
+│   │   │   ├── courses/[id]/page.tsx   # 课程详情 + 评价列表（写/编辑评价都在这页的弹窗/行内完成）
 │   │   │   └── profile/page.tsx        # 我的评价
 │   │   │
 │   │   └── layout.tsx                  # 根布局：<html>/<body> + NextIntlClientProvider
@@ -102,7 +100,7 @@ src/
 ├── hooks/                              # 前端 React hooks，只调用 /api/ 路由
 │   ├── useAuth.ts / useMe.ts
 │   ├── useCourses.ts                   # 课程列表 + 加载更多（?n= 深度恢复）
-│   ├── useCourse.ts / useReviews.ts / useMyReviews.ts
+│   ├── useCourse.ts                    # 详情 + 评价（合并响应）/ useMyReviews.ts
 │   └── useUrlState.ts / useDebounce.ts
 │
 ├── types/
@@ -175,103 +173,22 @@ supabase/migrations/                    # 建表 SQL，按版本管理
 
 ## 数据库设计
 
-### 核心表
+**字段和约束的唯一权威来源是 `supabase/migrations/`**（AI 用的表字段速查在 [AGENT_CONTEXT.md](AGENT_CONTEXT.md)）。这里只记设计决策：
 
-**users**
-```sql
-id            uuid  PK  -- 与 Supabase auth.users 同步
-email         text  UNIQUE NOT NULL  -- 仅限 @nyu.edu
-anonymous_id  text  UNIQUE NOT NULL  -- 注册时触发器自动生成，8位随机字符串
-role          text  DEFAULT 'user'   -- MVP 只有 'user' 一个值；字段保留供将来扩展
-created_at    timestamptz DEFAULT now()
-```
+| 表 / 对象 | 职责 | 关键设计 |
+|---|---|---|
+| users | auth.users 镜像 | 触发器自动同步 + 生成 8 位 `anonymous_id`（唯一、碰撞重试，可自助重置）；email 强制 @nyu.edu；应用层禁写 |
+| courses | 课程 | UNIQUE (home_campus, code)；分类 = 4 个数组字段 + GE 布尔（同维度 OR、跨维度 AND）；`created_by` 记建课人 |
+| professors | 教授 | `name_en` 小写存储 + UNIQUE（防大小写重复），展示时前端首字母大写 |
+| course_professor | 多对多 | PK (course_id, professor_id) |
+| reviews | 评价 | UNIQUE (user_id, course_id, professor_id, semester)；软删 `is_visible`；site = 16 个 NYU site；无量化评分 |
+| review_votes | 点赞/踩 | PK (review_id, user_id) 一人一票，vote ∈ {-1, 1} |
+| course_search（视图） | 课程列表查询 | courses + 等同组合并 `review_count`；security_invoker；支持按评价数排序分页 |
+| sites | 预留 | MVP 未用；site 枚举在 `lib/constants/sites.ts` |
 
-**courses**
-```sql
-id                  uuid    PK
-code                text    NOT NULL       -- 如 "CSCI-SHU 101"
-name_en             text    NOT NULL
-home_campus         text    NOT NULL DEFAULT 'SH'  -- 16 个 NYU site 之一（学位校区 + study-away）
-major_required      text[]  NOT NULL DEFAULT '{}'  -- 主修必修课的 major 列表
-major_elective      text[]  NOT NULL DEFAULT '{}'  -- 主修选修课的 major 列表
-minor               text[]  NOT NULL DEFAULT '{}'  -- minor 项目列表
-core_type           text[]  NOT NULL DEFAULT '{}'  -- 核心课程子类（GPS / PoH / WAI 等）
-is_general_elective boolean NOT NULL DEFAULT false -- 通识选修标记
-is_verified         boolean DEFAULT true   -- 字段为未来审核流程预留；MVP 默认 true，不在 RLS 中过滤
-equivalent_id       uuid    FK → courses(id) -- 自引用，海外课指向上海锚点课（星型，触发器防环/链）
-created_by          uuid    FK → users(id)   -- 建课人（速率限制用；用户注销置 null）
-created_at          timestamptz DEFAULT now()
+**等同课映射**：星型结构——非上海课的 `equivalent_id` 指向上海锚点课，触发器禁自指/链式/锚点改挂。建课时填上海课号即可自助关联（不存在则自动建同名锚点课）；后续调整暂需维护者手动。
 
-UNIQUE (home_campus, code)
--- 一门课可同时归属多个 major + 多个 core_type。
--- 筛选逻辑：同维度内 OR，跨维度 AND；Major 筛选时 required ∪ elective 一起匹配。
-```
-
-**professors**
-```sql
-id          uuid  PK
-name_en     text  NOT NULL UNIQUE  -- 统一小写存储（防大小写重复），展示时前端首字母大写
-is_verified boolean DEFAULT true   -- 字段为未来审核流程预留；MVP 默认 true
-```
-
-**course_professor**（多对多中间表）
-```sql
-course_id    uuid  FK → courses(id)
-professor_id uuid  FK → professors(id)
-PRIMARY KEY (course_id, professor_id)
-```
-
-**reviews**（核心表）
-```sql
-id           uuid  PK
-user_id      uuid  FK → users(id)
-course_id    uuid  FK → courses(id)
-professor_id uuid  FK → professors(id)
-semester     text  NOT NULL  -- 格式："2024 Fall" / "2025 Spring"
-site         text  NOT NULL  -- 16 个 NYU site；前端自动带 Navbar 当前校区（不在表单里选）
-content_zh   text            -- 与 content_en 至少一个不为空（应用层校验）
-content_en   text
-is_visible   boolean DEFAULT true  -- 软删除字段
-created_at   timestamptz DEFAULT now()
-
-UNIQUE (user_id, course_id, professor_id, semester)
--- rating / difficulty / workload 已在 20260528000003 移除（MVP 不做量化指标，
--- 未来加回时新写 migration ADD COLUMN）
-```
-
-**review_votes**（点赞 / 点踩，每人每评价一票）
-```sql
-review_id  uuid  FK → reviews(id)  ON DELETE CASCADE
-user_id    uuid  FK → users(id)    ON DELETE CASCADE
-vote       int2  NOT NULL CHECK (vote IN (-1, 1))
-created_at timestamptz DEFAULT now()
-PRIMARY KEY (review_id, user_id)
-```
-
-**等同课映射（courses.equivalent_id，已实现）**
-- 星型结构：非上海课指向上海锚点课；等同组 = 锚点 + 指向它的所有课
-- 触发器 `check_course_equivalent` 禁止自指 / 链式 / 锚点改挂
-- 课程详情返回 `equivalents[]`；评价列表自动聚合整组（靠 review.site 区分来源）
-- 映射建立：非上海校区建课时可填「上海等同课课号」（`sh_equivalent_code`）——
-  上海库里有就直接关联；没有就自动建一门同名同分类的上海锚点课再关联。
-  维护者也可在 Studio / SQL 手动改 `equivalent_id`
-
-**sites**（扩展表，MVP 不使用；site 枚举在 `lib/constants/sites.ts`）
-```sql
-id    uuid  PK
-name  text  NOT NULL  -- "Shanghai"
-code  text  UNIQUE    -- "SHA"
-```
-
-### RLS 策略
-
-完整定义见 `supabase/migrations/20260521000001_enable_rls.sql`，要点：
-
-- **users**：只能 SELECT 自己一行；所有写操作禁用，由 `handle_new_auth_user` 触发器同步写入（含 anonymous_id 生成 + 碰撞重试）
-- **courses / professors / course_professor / sites**：authenticated 可读；courses / professors / course_professor 可 INSERT；不开 UPDATE / DELETE
-- **reviews**：authenticated 可读 `is_visible = true` 的或本人的（含软删）；只能 INSERT / UPDATE 自己的；不开 DELETE（真删被数据库拒绝，软删走 UPDATE is_visible）
-- **review_votes**：authenticated 可读全部（聚合计数用）；INSERT / UPDATE / DELETE 仅限自己的票
-- **auth hook**：`hook_before_user_created` 在用户创建前拒绝非 @nyu.edu 邮箱（20260707000002）
+**RLS 要点**（完整定义见迁移文件）：所有表 authenticated-only；users 只读自己、禁写（写走触发器和 `reset_anonymous_id()` 函数）；reviews 可见的或本人的、只能写改自己的、禁真删；review_votes 全员可读、增改删限自己；auth hook `hook_before_user_created` 拒绝非 @nyu.edu。
 
 ---
 
@@ -310,12 +227,12 @@ code  text  UNIQUE    -- "SHA"
 - NYU Google 账号登录（OAuth，无密码体系）
 - 全局校区切换 = 16 个 NYU site（Navbar 下拉；课程归属、写评价的 site 都跟随它）
 - 课程搜索（按课程编号、名称、教授名）+ 加载更多分页（深度持久化到 `?n=`）
-- 课程卡片显示真实评价数（等同课组合并计数）
-- 课程详情页（显示该课所有评价，含等同课组内其他校区的评价；教授筛选项从评价推导）
-- 写评价（文字内容中/英 / 教授 / 学期；site 自动取 Navbar 当前校区；无量化评分）
+- 课程列表默认按评价数降序（等同课组合并计数，course_search 视图）
+- 课程详情页一次请求返回详情 + 全部评价（含等同课组；教授筛选项从评价推导）
+- 写评价（文字内容中/英合计 ≥30 字符、单栏 ≤5000 / 教授 / 学期；site 自动取 Navbar 当前校区；无量化评分）
 - 修改评价、评价点赞 / 点踩
 - 我的评价页（查看 + 软删除）
-- 匿名 ID 显示（不显示真实邮箱）
+- 匿名 ID 显示（不显示真实邮箱），可自助重置
 - 等同课映射（星型指向上海锚点课；非上海建课时填上海课号即可自助关联/自动建锚点）
 - 速率限制（评价 10 条/小时、建课 5 门/小时，DB count 实现）
 
@@ -343,26 +260,3 @@ Google Cloud Console 侧：OAuth Client（Web application）的 Authorized redir
 本地填 `http://127.0.0.1:54321/auth/v1/callback`，生产填
 `https://<project-ref>.supabase.co/auth/v1/callback`。
 
----
-
-## 开发阶段
-
-| 阶段 | 内容 | 目标时间 |
-|------|------|----------|
-| Phase 1 | 项目初始化，建表 SQL，Supabase 配置 | 第 1 周 |
-| Phase 2 | Auth 流程：注册 / 登录 / middleware | 第 1-2 周 |
-| Phase 3 | 课程搜索，评价 CRUD，我的评价页 | 第 2-3 周 |
-| Phase 4 | UI 打磨，移动端适配，bug 修复 | 第 4 周 |
-| Phase 5 | README，开源发布，初始数据录入 | 上线后 |
-
----
-
-## 给 AI Agent 的规则
-
-1. **生成 API Route 时**：数据库操作调用 `lib/db/` 下的函数，不在 `route.ts` 里直接写 SQL；获取 supabase 客户端用 `await createClient()`（async）
-2. **生成前端组件时**：数据获取通过 `hooks/` 调用 `/api/` 路由，不直接 import `lib/`
-3. **生成数据库查询时**：默认用 `createClient()`（遵守 RLS，以登录用户身份）。只在管理任务（批量导入、跨用户操作）才用 `createAdminClient()`
-4. **新增表字段时**：同步更新 `supabase/migrations/` 和 `types/index.ts`
-5. **所有新页面**：默认放在 `[locale]/(main)/` 路由组，除非明确是登录前可访问的
-6. **i18n 翻译**：所有静态文案使用 `next-intl` 的 `useTranslations`，不在组件内硬编码中文或英文；新增 key 同步加到 `messages/zh.json` 和 `messages/en.json`
-7. **修改 middleware**：编辑 `src/middleware.ts`，不要在项目根目录创建 `middleware.ts`

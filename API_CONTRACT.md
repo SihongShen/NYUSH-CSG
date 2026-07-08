@@ -2,7 +2,8 @@
 
 > 所有 endpoint 在 `src/app/api/` 下。前端通过 `fetch('/api/...')` 调用；不经过 `[locale]` 前缀。
 > 类型定义统一在 [`src/types/index.ts`](src/types/index.ts)。请求/响应 JSON 用 **snake_case** 对齐数据库列名。
-> 通用错误格式：`ApiError { error: string; message?: string; fields?: string[] }`。
+> 通用错误格式：`ApiError { error: string; message?: string; fields?: Record<string, string> }`
+> （`fields` 是 字段名 → 错误文案 的映射，校验失败时返回）。
 
 ---
 
@@ -13,7 +14,7 @@
 | Content-Type | 请求体 / 响应体均 `application/json` |
 | 鉴权 | 通过 cookie 中的 Supabase session；服务端用 `requireUser()` 或 `getUser()` 拿当前用户 |
 | 错误码 | HTTP 状态码语义化；body 中 `error` 字段是稳定 key（前端用于查 i18n） |
-| 分页 | GET 列表接口支持 `?limit=&offset=`，默认 `limit=20, offset=0` |
+| 分页 | 仅 `GET /api/courses` 支持 `?limit=&offset=`（默认 20/0，limit 上限 100）；评价列表一次性全量返回 |
 | 时间字段 | ISO 8601 字符串（如 `2024-09-15T03:21:00.000Z`） |
 
 ### 通用错误码
@@ -22,9 +23,10 @@
 |------|-----------|------|
 | 400 | `validation` | 字段校验失败，详见 `fields` |
 | 401 | `unauthorized` | 未登录或 session 过期 |
-| 403 | `forbidden` | 已登录但无权操作（如改别人的评价） |
-| 404 | `not_found` | 资源不存在 |
-| 409 | `conflict` | 业务冲突（如重复提交评价） |
+| 403 | `cannot_vote_own` | 已登录但无权操作（目前仅：给自己的评价投票）。注：改/删别人的评价按更新行数返回 404，不暴露资源是否存在 |
+| 404 | `not_found` | 资源不存在（或不属于当前用户） |
+| 409 | `duplicate` / `duplicate_code` | 业务冲突（重复评价 / 同校区同课号） |
+| 429 | `rate_limited` | 超出每小时创建配额（评价 10 / 课程 5） |
 | 500 | `internal` | 服务端异常 |
 
 ---
@@ -46,6 +48,12 @@
 **200**: `{ id, email, anonymous_id }` — 当前用户基本信息（profile 页用）  
 **401**: `unauthorized`
 
+### `POST /api/me/anonymous-id`
+**Auth**: 需要登录  
+**200**: `{ anonymous_id }` — 重置后的新匿名 ID（`reset_anonymous_id()` security definer 函数，碰撞重试）  
+**401**: `unauthorized`  
+**行为**: 历史评价的作者展示即时切换为新 ID（展示时实时反查，不存快照），不可撤销
+
 ---
 
 ## Courses
@@ -56,7 +64,8 @@
 （`major` / `minor` / `core` 为逗号分隔多值；`ge=1` 表示只看通识选修；`campus` ∈ 16 个 NYU site）  
 **200**: `Paginated<CourseWithStats>` — `{ items: (Course & { review_count })[], total, limit, offset }`  
 **业务规则**:
-- `review_count` 为**等同课组合并**的评价总数（组成员嵌套 `reviews(count)` 聚合，RLS 生效）
+- 查 `course_search` 视图（courses + 等同课组合并的 `review_count`，security_invoker RLS 生效）
+- **排序：`review_count` 降序，同数按 `code` 字母序**
 - 返回所有课程（MVP 不做审核过滤；`is_verified` 字段保留供未来扩展）
 - `q` 模糊匹配 `code` / `name_en` / **关联教授名**（教授名小写存储，匹配后经 course_professor 反查课程并入 OR）
 - 筛选：同维度 OR、跨维度 AND；Major 匹配 `major_required ∪ major_elective`
@@ -78,8 +87,8 @@
 ### `GET /api/courses/[id]`
 **Auth**: 需要登录  
 **Params**: `id` (uuid)  
-**200**: [`CourseDetail`](src/types/index.ts) — Course + `professors: Professor[]` + `equivalents: EquivalentCourse[]`（等同课组成员，不含自己）  
-**404**: 课程不存在或未审核  
+**200**: [`CourseDetailWithReviews`](src/types/index.ts) — Course + `professors[]` + `equivalents[]`（等同课组成员，不含自己）+ **`reviews: ReviewWithAuthor[]`（含等同课组全部评价，一次请求）**  
+**404**: 课程不存在  
 
 ---
 
@@ -108,7 +117,7 @@
 **429**: `rate_limited`（每人每小时最多 10 条）  
 **业务规则**:
 - `professor_id` 和 `new_professor_name` 二选一必填；新教授名小写存储 find-or-create 并关联到课程
-- `content_zh` 和 `content_en` 至少一个非空非纯空白
+- `content_zh` 和 `content_en` 至少一个非空非纯空白；**合计（trim 后）≥ 30 字符、单栏 ≤ 5000**（`lib/constants/reviews.ts`，PATCH 改内容同规则）
 - `semester` 格式 `"YYYY Fall"` / `"YYYY Spring"` / `"YYYY Summer"` / `"YYYY January"`
 - `site` 可选，16 个 NYU site 之一（前端自动带 Navbar 当前校区）；不传默认 `course.home_campus`
 - `user_id` 强制取 session 用户，不接受前端传
@@ -136,12 +145,3 @@
 **400**: `validation`（vote 不是 1/-1/0）  
 **403**: `cannot_vote_own`（不能给自己的评价投票）  
 **404**: `not_found`（评价不存在或不可见）
-
----
-
-## 待补充
-
-- [ ] 课程详情页是否要把"该课所有评价"一起返回？（性能 vs 多一次请求）
-- [ ] 评价举报 endpoint（点赞/点踩已实现）
-- [ ] 课程 / 教授审核 endpoint + admin 角色（等做 admin 后台时再加）
-- [ ] 等同课映射的后续调整接口（建课时可自助关联；建完想改/解绑目前仍需维护者手动）
