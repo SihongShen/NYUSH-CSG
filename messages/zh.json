@@ -38,6 +38,16 @@
     "hints": {
       "nyuOnly": "仅限 @nyu.edu 账号登录"
     },
+    "features": {
+      "anonymous": "匿名评价",
+      "campuses": "16 个校区",
+      "equivalents": "等同课聚合"
+    },
+    "credit": {
+      "prefix": "感谢历届同学共同维护的",
+      "linkText": "选课指南原文档",
+      "suffix": "，本站在其基础上延续与存档"
+    },
     "errors": {
       "loginFailed": "登录失败，请重试",
       "domainNotAllowed": "仅限 @nyu.edu 账号登录，请选择你的 NYU 账号"
@@ -189,7 +199,8 @@
       "validation": {
         "newProfRequired": "请填写新教授名",
         "professorRequired": "请选择教授",
-        "contentRequired": "中文和英文评价至少填一个"
+        "contentRequired": "中文和英文评价至少填一个",
+        "contentTooLong": "单栏内容不能超过 {max} 个字符"
       },
       "toasts": {
         "submitted": "评价已提交",
@@ -234,7 +245,12 @@
     }
   },
   "anonymousId": {
-    "copyAria": "复制匿名 ID"
+    "copyAria": "复制匿名 ID",
+    "resetButton": "换一个",
+    "resetConfirmTitle": "确认更换匿名 ID？",
+    "resetConfirmDesc": "你之前发布的所有评价会立即显示新 ID（不会保留旧 ID 的痕迹），此操作不可撤销。",
+    "resetSuccess": "已更换新的匿名 ID",
+    "resetFailed": "更换失败，请重试"
   },
   "chipInput": {
     "removeAria": "移除 {chip}"

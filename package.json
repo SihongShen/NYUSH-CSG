@@ -1,7 +1,7 @@
 {
   "name": "nyush-csg",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.1.0",
+  "description": "NYU Shanghai 课程评价与历史存档平台 — anonymous, NYU-only course review platform",
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
@@ -19,7 +19,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/SihongShen/NYUSH-CSG/issues"
   },

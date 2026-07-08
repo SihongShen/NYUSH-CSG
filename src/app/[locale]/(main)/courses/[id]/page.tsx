@@ -13,7 +13,6 @@ import { ReviewSubmitDialog } from '@/components/review/ReviewSubmitDialog';
 import { EmptyState } from '@/components/common/EmptyState';
 import { useAuth } from '@/hooks/useAuth';
 import { useCourse } from '@/hooks/useCourse';
-import { useReviews } from '@/hooks/useReviews';
 import { siteName } from '@/lib/constants/sites';
 import type { CourseDetail } from '@/types';
 
@@ -80,18 +79,17 @@ export default function CourseDetailPage({
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const t = useTranslations('course.detail');
+  // 详情 + 评价合并在一个请求里返回（GET /api/courses/[id]）
   const {
     course,
     loading: courseLoading,
     error: courseError,
     refetch: refetchCourse
   } = useCourse(id);
-  const {
-    reviews,
-    loading: reviewsLoading,
-    error: reviewsError,
-    refetch: refetchReviews
-  } = useReviews(id);
+  const reviews = course?.reviews ?? [];
+  // 首屏才让评价区显示骨架；已有数据时的 refetch 保留旧列表原地更新
+  const reviewsLoading = courseLoading && !course;
+  const reviewsError = courseError;
 
   const [submitOpen, setSubmitOpen] = useState(false);
 
@@ -113,10 +111,12 @@ export default function CourseDetailPage({
 
   function refreshAll() {
     refetchCourse();
-    refetchReviews();
   }
 
-  if (courseLoading) {
+  // 只有首屏（还没有任何课程数据）才整页骨架屏；
+  // 评价增删改触发的 refetch 保留现有页面，仅评价列表内部原地刷新，
+  // 避免整页卸载导致滚动跳顶
+  if (courseLoading && !course) {
     return (
       <main className="mx-auto max-w-7xl px-6 py-8">
         <div className={SIDEBAR_GRID}>

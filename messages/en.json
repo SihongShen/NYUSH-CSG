@@ -38,6 +38,16 @@
     "hints": {
       "nyuOnly": "Only @nyu.edu accounts are allowed"
     },
+    "features": {
+      "anonymous": "Anonymous reviews",
+      "campuses": "16 campuses",
+      "equivalents": "Equivalent courses"
+    },
+    "credit": {
+      "prefix": "Built upon the ",
+      "linkText": "original course selection doc",
+      "suffix": " maintained by generations of students — thank you"
+    },
     "errors": {
       "loginFailed": "Sign-in failed, please try again",
       "domainNotAllowed": "Only @nyu.edu accounts can sign in — please choose your NYU account"
@@ -189,7 +199,8 @@
       "validation": {
         "newProfRequired": "Please enter the new professor name",
         "professorRequired": "Please select a professor",
-        "contentRequired": "Please fill in at least one of Chinese or English content"
+        "contentRequired": "Please fill in at least one of Chinese or English content",
+        "contentTooLong": "Each field is limited to {max} characters"
       },
       "toasts": {
         "submitted": "Review submitted",
@@ -234,7 +245,12 @@
     }
   },
   "anonymousId": {
-    "copyAria": "Copy anonymous ID"
+    "copyAria": "Copy anonymous ID",
+    "resetButton": "Get a new one",
+    "resetConfirmTitle": "Reset your anonymous ID?",
+    "resetConfirmDesc": "All your existing reviews will immediately show the new ID (the old one leaves no trace). This cannot be undone.",
+    "resetSuccess": "Anonymous ID reset",
+    "resetFailed": "Reset failed, please try again"
   },
   "chipInput": {
     "removeAria": "Remove {chip}"

@@ -1,54 +1,32 @@
 import { NextResponse } from 'next/server';
-import {
-  createReview,
-  listReviewsForCourse,
-  listReviewsForUser
-} from '@/lib/db/reviews';
+import { createReview, listReviewsForUser } from '@/lib/db/reviews';
 import { getUser, requireUser } from '@/lib/auth/session';
 import { HOURLY_LIMITS, isOverHourlyLimit } from '@/lib/db/rate-limit';
 import { isValidSemester } from '@/lib/constants/semesters';
 import { isValidSite } from '@/lib/constants/sites';
+import { reviewContentError, reviewContentMessage } from '@/lib/constants/reviews';
 
 // ============================================================================
-// GET /api/reviews
-//   ?course_id=...   一门课的所有评价（公开，RLS 控制可见性）
-//   ?user_id=me      当前登录用户的所有评价（含软删，需登录）
+// GET /api/reviews?user_id=me
+//   当前登录用户的所有评价（含软删）。一门课的评价改由
+//   GET /api/courses/[id] 一并返回，这里不再提供 course_id 分支。
 // ============================================================================
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const courseId = searchParams.get('course_id');
-  const userIdParam = searchParams.get('user_id');
-
-  // 分支 1：拉自己的评价
-  if (userIdParam === 'me') {
-    const user = await getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-    }
-    try {
-      const items = await listReviewsForUser(user.id);
-      return NextResponse.json({ items });
-    } catch (error) {
-      console.error('GET /api/reviews?user_id=me error', error);
-      return NextResponse.json({ error: 'internal' }, { status: 500 });
-    }
+  if (searchParams.get('user_id') !== 'me') {
+    return NextResponse.json({ error: 'user_id_required' }, { status: 400 });
   }
 
-  // 分支 2：拉一门课的评价
-  if (!courseId) {
-    return NextResponse.json(
-      { error: 'course_id_required' },
-      { status: 400 }
-    );
+  const user = await getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
-
   try {
-    const user = await getUser();
-    const items = await listReviewsForCourse(courseId, user?.id ?? null);
+    const items = await listReviewsForUser(user.id);
     return NextResponse.json({ items });
   } catch (error) {
-    console.error('GET /api/reviews error', error);
+    console.error('GET /api/reviews?user_id=me error', error);
     return NextResponse.json({ error: 'internal' }, { status: 500 });
   }
 }
@@ -100,9 +78,10 @@ export async function POST(request: Request) {
 
   const content_zh = strField(body, 'content_zh');
   const content_en = strField(body, 'content_en');
-  if (!content_zh && !content_en) {
-    fields.content = '中文和英文评价至少填一个';
-  }
+  const contentErr = reviewContentMessage(
+    reviewContentError(content_zh, content_en)
+  );
+  if (contentErr) fields.content = contentErr;
 
   if (Object.keys(fields).length > 0) {
     return NextResponse.json({ error: 'validation', fields }, { status: 400 });

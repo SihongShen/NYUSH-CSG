@@ -22,6 +22,7 @@ import {
   type Season
 } from '@/lib/constants/semesters';
 import { siteName } from '@/lib/constants/sites';
+import { MAX_REVIEW_LENGTH, reviewContentError } from '@/lib/constants/reviews';
 import { useCampus } from '@/components/providers/CampusProvider';
 import { formatProfessorName } from '@/utils/format';
 import type { Professor, ReviewWithAuthor } from '@/types';
@@ -73,8 +74,11 @@ export function ReviewForm({
         errs.professor = t('validation.professorRequired');
       }
     }
-    if (!contentZh.trim() && !contentEn.trim()) {
+    const contentErr = reviewContentError(contentZh, contentEn);
+    if (contentErr === 'empty') {
       errs.content = t('validation.contentRequired');
+    } else if (contentErr === 'tooLong') {
+      errs.content = t('validation.contentTooLong', { max: MAX_REVIEW_LENGTH });
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;

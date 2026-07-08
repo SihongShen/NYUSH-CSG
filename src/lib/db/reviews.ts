@@ -29,7 +29,12 @@ async function fetchVoteStats(
     .from('review_votes')
     .select('review_id, user_id, vote')
     .in('review_id', reviewIds);
-  if (error) throw error;
+  // 投票统计是 enrich，不是核心数据：查询失败时降级为空计数，
+  // 不让它把整个（合并进课程详情的）请求拖垮
+  if (error) {
+    console.error('fetchVoteStats error (degraded to empty)', error);
+    return stats;
+  }
 
   for (const row of data ?? []) {
     const s = stats.get(row.review_id) ?? {
@@ -83,8 +88,19 @@ export async function listReviewsForCourse(
   currentUserId: string | null
 ): Promise<ReviewWithAuthor[]> {
   const supabase = await createClient();
-
   const courseIds = await resolveEquivalentGroup(supabase, courseId);
+  return listReviewsForCourseIds(courseIds, currentUserId);
+}
+
+/**
+ * 直接按一组已知的 course_id 拉评价（调用方已经解析好等同课组，
+ * 避免课程详情端点重复解析——getCourse 已经查过整组）。
+ */
+export async function listReviewsForCourseIds(
+  courseIds: string[],
+  currentUserId: string | null
+): Promise<ReviewWithAuthor[]> {
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('reviews')
