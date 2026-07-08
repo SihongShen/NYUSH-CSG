@@ -5,11 +5,7 @@ import {
   updateReview
 } from '@/lib/db/reviews';
 import { requireUser } from '@/lib/auth/session';
-import {
-  MAX_REVIEW_LENGTH,
-  MIN_REVIEW_LENGTH,
-  reviewContentLengthError
-} from '@/lib/constants/reviews';
+import { reviewContentError, reviewContentMessage } from '@/lib/constants/reviews';
 
 /**
  * PATCH /api/reviews/[id]
@@ -67,27 +63,12 @@ export async function PATCH(
   const content_en =
     typeof body.content_en === 'string' ? body.content_en.trim() : '';
 
-  if (!content_zh && !content_en) {
+  const contentErr = reviewContentMessage(
+    reviewContentError(content_zh, content_en)
+  );
+  if (contentErr) {
     return NextResponse.json(
-      {
-        error: 'validation',
-        fields: { content: '中文和英文评价至少填一个' }
-      },
-      { status: 400 }
-    );
-  }
-  const lengthErr = reviewContentLengthError(content_zh, content_en);
-  if (lengthErr) {
-    return NextResponse.json(
-      {
-        error: 'validation',
-        fields: {
-          content:
-            lengthErr === 'tooShort'
-              ? `评价内容至少 ${MIN_REVIEW_LENGTH} 个字符`
-              : `单栏内容不能超过 ${MAX_REVIEW_LENGTH} 个字符`
-        }
-      },
+      { error: 'validation', fields: { content: contentErr } },
       { status: 400 }
     );
   }

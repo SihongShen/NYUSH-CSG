@@ -12,8 +12,6 @@ import type {
   Professor
 } from '@/types';
 
-type Supabase = Awaited<ReturnType<typeof createClient>>;
-
 /** 课程 code 重复时抛这个错，API 转 409 + existing_id */
 export class DuplicateCourseCodeError extends Error {
   constructor(public existingId: string) {
@@ -128,10 +126,12 @@ export async function getCourses(
     query = query.eq('is_general_elective', true);
   }
 
-  // 默认排序：评价多的在前（对选课参考更有用），同数按课号字母序
+  // 默认排序：评价多的在前（对选课参考更有用），同数按课号字母序；
+  // 末位用 id 打破并列，保证全序，避免 offset 分页跨页重复/漏行
   const { data, error, count } = await query
     .order('review_count', { ascending: false })
     .order('code', { ascending: true })
+    .order('id', { ascending: true })
     .range(safeOffset, safeOffset + safeLimit - 1);
 
   if (error) throw error;

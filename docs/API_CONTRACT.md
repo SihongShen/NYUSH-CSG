@@ -65,7 +65,7 @@ The domain restriction is enforced server-side by Supabase's `hook_before_user_c
 **200**: `Paginated<CourseWithStats>` — `{ items: (Course & { review_count })[], total, limit, offset }`  
 **Business rules**:
 - Queries the `course_search` view (courses + `review_count` merged across equivalent-course groups, security_invoker so RLS applies)
-- **Sort: `review_count` descending, ties broken by `code` alphabetically**
+- **Sort: `review_count` descending, then `code` alphabetically, then `id` as a final tiebreaker (total order, so offset pagination never duplicates/skips rows)**
 - Returns all courses (no moderation filtering in MVP; the `is_verified` field is reserved for future use)
 - `q` fuzzy-matches `code` / `name_en` / **associated professor names** (professor names are stored lowercase; matches are mapped back to courses via course_professor and merged into the OR)
 - Filtering: OR within a dimension, AND across dimensions; Major matches `major_required ∪ major_elective`
@@ -94,14 +94,13 @@ The domain restriction is enforced server-side by Supabase's `hook_before_user_c
 
 ## Reviews
 
-### `GET /api/reviews`
+### `GET /api/reviews?user_id=me`
 **Auth**: Login required  
-**Query**: `?course_id=<uuid>` (reviews for one course) or `?user_id=me` (all reviews by the current user, including soft-deleted)  
-**200**: `{ items: ReviewWithAuthor[] }` (course_id branch) / `{ items: ReviewWithCourse[] }` (user_id=me branch, includes course code / name)  
-**400**: `course_id_required` (neither parameter provided)  
-**401**: `unauthorized` (`user_id=me` but not logged in)  
+**Query**: `?user_id=me` — all reviews by the current user, including soft-deleted. (Reviews for a course are returned by `GET /api/courses/[id]`; there is no `course_id` branch.)  
+**200**: `{ items: ReviewWithCourse[] }` (includes course code / name)  
+**400**: `user_id_required` (missing/invalid `user_id`)  
+**401**: `unauthorized` (not logged in)  
 **Business rules**:
-- **Equivalent-course aggregation**: the course_id branch automatically expands the equivalent-course group (anchor + all members) and returns reviews for the whole group; the frontend distinguishes the source via `site`
 - Each item includes vote stats: `upvotes` / `downvotes` / `my_vote` (the current user's vote: 1 / -1 / 0)
 - Visibility is controlled by RLS: rows with `is_visible = true`, or the user's own (including soft-deleted)
 - Authors are displayed as `author_anonymous_id` (looked up via the `get_anonymous_id()` function; email is never exposed)
@@ -117,7 +116,7 @@ The domain restriction is enforced server-side by Supabase's `hook_before_user_c
 **429**: `rate_limited` (max 10 reviews per person per hour)  
 **Business rules**:
 - Exactly one of `professor_id` and `new_professor_name` is required; new professor names are stored lowercase with find-or-create and linked to the course
-- At least one of `content_zh` and `content_en` must be non-empty and not whitespace-only; **combined (after trim) ≥ 30 characters, each field ≤ 5000** (`lib/constants/reviews.ts`; the same rules apply to content edits via PATCH)
+- Content validity (empty / too-long) is one rule set in `reviewContentError` (`lib/constants/reviews.ts`): at least one of `content_zh` / `content_en` non-empty, **each field ≤ 5000 chars (no minimum)**; same rules on PATCH edits
 - `semester` format: `"YYYY Fall"` / `"YYYY Spring"` / `"YYYY Summer"` / `"YYYY January"`
 - `site` is optional, one of the 16 NYU sites (the frontend automatically sends the current Navbar campus); defaults to `course.home_campus` if omitted
 - `user_id` is always taken from the session user; values from the frontend are ignored
