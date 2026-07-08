@@ -22,11 +22,7 @@ import {
   type Season
 } from '@/lib/constants/semesters';
 import { siteName } from '@/lib/constants/sites';
-import {
-  MAX_REVIEW_LENGTH,
-  MIN_REVIEW_LENGTH,
-  reviewContentLengthError
-} from '@/lib/constants/reviews';
+import { MAX_REVIEW_LENGTH, reviewContentError } from '@/lib/constants/reviews';
 import { useCampus } from '@/components/providers/CampusProvider';
 import { formatProfessorName } from '@/utils/format';
 import type { Professor, ReviewWithAuthor } from '@/types';
@@ -78,25 +74,15 @@ export function ReviewForm({
         errs.professor = t('validation.professorRequired');
       }
     }
-    if (!contentZh.trim() && !contentEn.trim()) {
+    const contentErr = reviewContentError(contentZh, contentEn);
+    if (contentErr === 'empty') {
       errs.content = t('validation.contentRequired');
-    } else {
-      const lengthErr = reviewContentLengthError(contentZh, contentEn);
-      if (lengthErr === 'tooShort') {
-        errs.content = t('validation.contentTooShort', {
-          min: MIN_REVIEW_LENGTH
-        });
-      } else if (lengthErr === 'tooLong') {
-        errs.content = t('validation.contentTooLong', {
-          max: MAX_REVIEW_LENGTH
-        });
-      }
+    } else if (contentErr === 'tooLong') {
+      errs.content = t('validation.contentTooLong', { max: MAX_REVIEW_LENGTH });
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
-
-  const combinedLength = contentZh.trim().length + contentEn.trim().length;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -285,23 +271,9 @@ export function ReviewForm({
         />
       </div>
 
-      <div className="flex items-center justify-between gap-2">
-        {errors.content ? (
-          <p className="text-xs text-destructive">{errors.content}</p>
-        ) : (
-          <span />
-        )}
-        {/* 合计字数：不足下限时提示还差多少 */}
-        <span
-          className={
-            combinedLength > 0 && combinedLength < MIN_REVIEW_LENGTH
-              ? 'text-xs text-muted-foreground'
-              : 'text-xs text-muted-foreground/60'
-          }
-        >
-          {combinedLength} / {MIN_REVIEW_LENGTH}+
-        </span>
-      </div>
+      {errors.content && (
+        <p className="text-xs text-destructive">{errors.content}</p>
+      )}
 
       <div className="flex justify-end gap-2">
         <Button

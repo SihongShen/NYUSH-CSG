@@ -87,7 +87,8 @@ export default function CourseDetailPage({
     refetch: refetchCourse
   } = useCourse(id);
   const reviews = course?.reviews ?? [];
-  const reviewsLoading = courseLoading;
+  // 首屏才让评价区显示骨架；已有数据时的 refetch 保留旧列表原地更新
+  const reviewsLoading = courseLoading && !course;
   const reviewsError = courseError;
 
   const [submitOpen, setSubmitOpen] = useState(false);
@@ -112,7 +113,10 @@ export default function CourseDetailPage({
     refetchCourse();
   }
 
-  if (courseLoading) {
+  // 只有首屏（还没有任何课程数据）才整页骨架屏；
+  // 评价增删改触发的 refetch 保留现有页面，仅评价列表内部原地刷新，
+  // 避免整页卸载导致滚动跳顶
+  if (courseLoading && !course) {
     return (
       <main className="mx-auto max-w-7xl px-6 py-8">
         <div className={SIDEBAR_GRID}>

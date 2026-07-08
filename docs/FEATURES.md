@@ -111,7 +111,7 @@ Your own review has [Edit] [Delete] in its top-right corner; others' reviews don
 - **Professor** dropdown, single-select: sourced from the course's associated professor list (stored lowercase, displayed title-cased); can also choose "New professor" and fill in `new_professor_name` (backend does find-or-create and associates it with the course)
 - **Semester**: two dropdowns for year + season (Fall / Spring / Summer / January)
 - **Campus**: not selected in the form — automatically taken from the Navbar's current global campus; the form shows a prominent purple dashed-border notice "This review will be marked as taken at **XX**; switch campus first if that's wrong"; for study-away, switch campus before writing the review
-- **Review content**: two fields, Chinese / English, **at least one non-empty**; **combined ≥ 30 characters, ≤ 5000 per field** (validated on both frontend and backend; rules live in `lib/constants/reviews.ts`; the form shows a live combined character count in the bottom-right)
+- **Review content**: two fields, Chinese / English, **at least one non-empty**; **≤ 5000 characters per field, no minimum** (validated on both frontend and backend; rules live in `lib/constants/reviews.ts`)
 - rating / difficulty / workload quantitative metrics have been removed (MVP is text-only reviews; may be added back later)
 - Submission returns 429 (over the 10-per-hour limit) → toast "Submitting too frequently"
 

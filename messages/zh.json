@@ -200,7 +200,6 @@
         "newProfRequired": "请填写新教授名",
         "professorRequired": "请选择教授",
         "contentRequired": "中文和英文评价至少填一个",
-        "contentTooShort": "评价内容合计至少 {min} 个字符，多写点帮助大家",
         "contentTooLong": "单栏内容不能超过 {max} 个字符"
       },
       "toasts": {

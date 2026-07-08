@@ -78,13 +78,19 @@ function sortReviews(items: ReviewWithCourse[], key: SortKey): ReviewWithCourse[
 // ---------------------------------------------------------------------------
 
 export default function ProfilePage() {
-  const { me, loading: meLoading } = useMe();
+  const { me, loading: meLoading, refetch: refetchMe } = useMe();
   const {
     reviews,
     loading: reviewsLoading,
     error: reviewsError,
     refetch
   } = useMyReviews();
+
+  // 重置匿名 ID 后：刷新 me（顶部徽章）和评价列表（下方卡片的作者 ID）
+  function handleAnonReset() {
+    refetchMe();
+    refetch();
+  }
 
   const t = useTranslations('profile');
   const tCommon = useTranslations('common');
@@ -160,7 +166,11 @@ export default function ProfilePage() {
                 {meLoading ? (
                   <Skeleton className="h-6 w-32" />
                 ) : me?.anonymous_id ? (
-                  <AnonymousIdBadge anonymousId={me.anonymous_id} allowReset />
+                  <AnonymousIdBadge
+                    anonymousId={me.anonymous_id}
+                    allowReset
+                    onReset={handleAnonReset}
+                  />
                 ) : (
                   <span className="text-destructive">
                     {t('fields.cannotFetch')}

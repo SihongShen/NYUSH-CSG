@@ -157,7 +157,7 @@ export async function getReviews(courseId: string) {
 
 - Email must end with `@nyu.edu`: enforced by the server-side auth hook + re-checked in the callback via `isAllowedEmail()` (`lib/auth/validate.ts`)
 - At least one of `content_zh` and `content_en` on `reviews` must be non-empty; validated in the frontend `ReviewForm` + re-checked at the API layer
-- Review content length: combined (after trim) ≥ 30 characters, each field ≤ 5000 — the rules and validation functions live in `lib/constants/reviews.ts`, shared by frontend and backend
+- Review content: at least one field non-empty, each field ≤ 5000 characters (no minimum) — the rules and validation functions live in `lib/constants/reviews.ts`, shared by frontend and backend
 - Anonymous ID reset goes through `POST /api/me/anonymous-id` → `rpc('reset_anonymous_id')` (direct writes to the users table are forbidden)
 - Course detail `GET /api/courses/[id]` returns `reviews[]` merged in; the frontend detail page makes only one request (useCourse)
 - `semester` format: `"2024 Fall"` / `"2025 Spring"` / `"2025 Summer"` / `"2025 January"` (`lib/constants/semesters.ts`)

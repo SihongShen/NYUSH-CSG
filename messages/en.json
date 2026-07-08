@@ -200,7 +200,6 @@
         "newProfRequired": "Please enter the new professor name",
         "professorRequired": "Please select a professor",
         "contentRequired": "Please fill in at least one of Chinese or English content",
-        "contentTooShort": "Please write at least {min} characters in total — more detail helps everyone",
         "contentTooLong": "Each field is limited to {max} characters"
       },
       "toasts": {

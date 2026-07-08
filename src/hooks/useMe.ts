@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface MeProfile {
   id: string;
@@ -12,6 +12,7 @@ export interface UseMeReturn {
   me: MeProfile | null;
   loading: boolean;
   error: string | null;
+  refetch: () => void;
 }
 
 /** 拉当前登录用户的基本信息（含 anonymous_id），用于 profile 页 badge。 */
@@ -19,6 +20,9 @@ export function useMe(): UseMeReturn {
   const [me, setMe] = useState<MeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+
+  const refetch = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +47,7 @@ export function useMe(): UseMeReturn {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [tick]);
 
-  return { me, loading, error };
+  return { me, loading, error, refetch };
 }

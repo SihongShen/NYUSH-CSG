@@ -229,7 +229,7 @@ No email verification, no passwords, no signup form — "successfully signing in
 - Course search (by course code, name, professor name) + load-more pagination (depth persisted to `?n=`)
 - Course list sorted by review count descending by default (equivalent groups merge counts, via the course_search view)
 - Course detail page returns detail + all reviews in one request (including the equivalent group; professor filter options derived from reviews)
-- Writing reviews (text content ≥30 characters combined Chinese/English, ≤5000 per field / per professor / per semester; site automatically taken from the Navbar's current campus; no numeric ratings)
+- Writing reviews (Chinese/English text, at least one non-empty, ≤5000 chars per field; one per professor / per semester; site automatically taken from the Navbar's current campus; no numeric ratings)
 - Editing reviews, upvoting/downvoting reviews
 - My reviews page (view + soft delete)
 - Anonymous ID display (real email never shown), self-service reset
