@@ -9,9 +9,9 @@ export type AuthFormStatus = 'idle' | 'submitting' | 'success' | 'error';
 // ============================================================================
 
 export type ApiError = {
-  error: string;            // 错误码（i18n key 或简短英文标识），如 'invalidNetid' / 'unauthorized'
-  message?: string;         // 可选人类可读消息
-  fields?: string[];        // 校验失败时具体哪些字段出错
+  error: string;                      // 错误码（稳定 key），如 'unauthorized' / 'rate_limited'
+  message?: string;                   // 可选人类可读消息
+  fields?: Record<string, string>;    // 校验失败时：字段名 → 错误文案
 };
 
 // ============================================================================
@@ -109,6 +109,11 @@ export interface EquivalentCourse {
 export interface CourseDetail extends Course {
   professors: Professor[];
   equivalents: EquivalentCourse[];   // 不含自己；空数组 = 没有等同课
+}
+
+/** GET /api/courses/[id] 的响应：详情 + 全部评价（含等同课组），一次请求 */
+export interface CourseDetailWithReviews extends CourseDetail {
+  reviews: ReviewWithAuthor[];
 }
 
 export interface ReviewWithAuthor extends Review {

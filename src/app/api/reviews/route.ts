@@ -8,6 +8,11 @@ import { getUser, requireUser } from '@/lib/auth/session';
 import { HOURLY_LIMITS, isOverHourlyLimit } from '@/lib/db/rate-limit';
 import { isValidSemester } from '@/lib/constants/semesters';
 import { isValidSite } from '@/lib/constants/sites';
+import {
+  MAX_REVIEW_LENGTH,
+  MIN_REVIEW_LENGTH,
+  reviewContentLengthError
+} from '@/lib/constants/reviews';
 
 // ============================================================================
 // GET /api/reviews
@@ -102,6 +107,13 @@ export async function POST(request: Request) {
   const content_en = strField(body, 'content_en');
   if (!content_zh && !content_en) {
     fields.content = '中文和英文评价至少填一个';
+  } else {
+    const lengthErr = reviewContentLengthError(content_zh, content_en);
+    if (lengthErr === 'tooShort') {
+      fields.content = `评价内容至少 ${MIN_REVIEW_LENGTH} 个字符`;
+    } else if (lengthErr === 'tooLong') {
+      fields.content = `单栏内容不能超过 ${MAX_REVIEW_LENGTH} 个字符`;
+    }
   }
 
   if (Object.keys(fields).length > 0) {
