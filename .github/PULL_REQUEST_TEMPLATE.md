@@ -20,7 +20,7 @@
 
 - [ ] `npm run typecheck && npm test` 全部通过
 - [ ] 本地手动验证过改动的功能路径
-- [ ] 行为变化已同步到对应文档（FEATURES / API_CONTRACT / ARCHITECTURE / AGENT_CONTEXT）
+- [ ] 行为变化已同步到 `docs/` 下对应文档（FEATURES / API_CONTRACT / ARCHITECTURE / AGENT_CONTEXT）
 - [ ] 新增文案同时更新了 `messages/zh.json` 和 `messages/en.json`
 - [ ] （如有迁移）已本地 `supabase migration up` 验证，并在 PR 描述里说明对线上的影响
 

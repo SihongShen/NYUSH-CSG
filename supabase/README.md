@@ -1,12 +1,12 @@
-# Supabase 工作流
+# Supabase Workflow
 
-本目录管理 NYUSH-CSG 的 Postgres schema、RLS 策略、触发器和数据库函数。
-**SQL 文件是真理；不要在 Supabase 控制台 UI 直接改表或策略**。
+This directory manages the Postgres schema, RLS policies, triggers, and database functions for NYUSH-CSG.
+**The SQL files are the source of truth; never modify tables or policies directly in the Supabase console UI.**
 
 ```
 supabase/
-├── config.toml              # Supabase CLI 项目配置（首次 init 生成，提交 git）
-├── migrations/              # 所有 schema 变更，按时间戳排序
+├── config.toml              # Supabase CLI project config (generated on first init, committed to git)
+├── migrations/              # All schema changes, ordered by timestamp
 │   ├── 20250407000001_initial_schema.sql
 │   └── 20260521000001_enable_rls.sql
 └── README.md
@@ -14,58 +14,58 @@ supabase/
 
 ---
 
-## 给贡献者（修代码、加 feature）
+## For Contributors (fixing code, adding features)
 
-你**完全不需要**项目维护者的任何账号 / 密钥。本地一套 Supabase 环境就够。
+You do **not** need any accounts or keys from the project maintainers. A local Supabase environment is all you need.
 
-### 1. 装 Docker Desktop
+### 1. Install Docker Desktop
 
 ```bash
 brew install --cask docker
-# 没有 brew 的话先装 brew：https://brew.sh
-# 或者去 https://www.docker.com 下 .dmg
+# If you don't have brew, install it first: https://brew.sh
+# Or download the .dmg from https://www.docker.com
 ```
-装完打开 Docker.app，等托盘图标稳定。
+Open Docker.app after installing and wait for the tray icon to settle.
 
-### 2. 装 Supabase CLI
+### 2. Install the Supabase CLI
 
 ```bash
 brew install supabase/tap/supabase
-# 或者：npm install -g supabase
-supabase --version  # 验证
+# Or: npm install -g supabase
+supabase --version  # verify
 ```
 
-### 3. 启动本地 Supabase（一次性等几分钟拉镜像）
+### 3. Start local Supabase (pulling images takes a few minutes the first time)
 
 ```bash
 cd /Users/<path>/NYUSH-CSG
 supabase start
 ```
 
-启动后会输出本地连接信息（URL / anon key / service_role key）。**这些 key 是 Supabase CLI 的固定开发 key，所有人本地都一样**，所以 [.env.example](../.env.example) 已经预填好，可以直接用：
+Once started, it prints the local connection info (URL / anon key / service_role key). **These keys are the Supabase CLI's fixed development keys — identical for everyone locally**, so [.env.example](../.env.example) is already pre-filled and ready to use:
 
 ```bash
 cp .env.example .env.local
 ```
 
-### 4. 把所有 migrations 应用到本地
+### 4. Apply all migrations locally
 
 ```bash
 supabase db reset
-# 删本地 DB → 按时间戳顺序跑所有 migrations → 跑 supabase/seed.sql（如果有）
+# Drops the local DB → runs all migrations in timestamp order → runs supabase/seed.sql (if present)
 ```
 
-跑完你的本地 Postgres 就有完整的 schema + RLS 策略 + trigger。
+After it finishes, your local Postgres has the full schema + RLS policies + triggers.
 
-### 5. 起前端
+### 5. Start the frontend
 
 ```bash
 npm install
 npm run dev
-# 打开 http://localhost:3000/login
+# Open http://localhost:3000/login
 ```
 
-总结：**4 行命令完整 onboarding**
+In summary: **full onboarding in 4 commands**
 
 ```bash
 cp .env.example .env.local
@@ -76,27 +76,27 @@ npm run dev
 
 ---
 
-## 日常开发命令速查
+## Everyday Command Reference
 
-> **本地命令**直接用下面的原生 `supabase`。**远端命令**（push / pull / diff / list / repair）可以用项目根目录的 [Makefile](../Makefile) 省掉 `--db-url` 长字符串，跑 `make help` 看用法。
+> For **local commands**, use the native `supabase` commands below directly. For **remote commands** (push / pull / diff / list / repair), you can use the [Makefile](../Makefile) in the project root to skip the long `--db-url` string — run `make help` for usage.
 
-| 命令 | 作用 |
+| Command | Purpose |
 |------|------|
-| `supabase start` | 启动本地 stack（Docker） |
-| `supabase stop` | 停容器，保留数据 |
-| `supabase stop --no-backup` | 停容器，删数据 |
-| `supabase status` | 查看本地 stack URL / key |
-| `supabase migration new <name>` | 新建 migration 文件 |
-| `supabase db reset` | 本地从头重跑所有 migrations（**最常用，验证 SQL 正确**） |
-| `supabase db push` | 把本地新 migration 推到远端 |
-| `supabase db pull` | 远端的变更反向 diff 成新 migration |
-| `supabase db diff` | 看本地 DB 跟 migrations 的差异 |
+| `supabase start` | Start the local stack (Docker) |
+| `supabase stop` | Stop containers, keep data |
+| `supabase stop --no-backup` | Stop containers, delete data |
+| `supabase status` | Show local stack URLs / keys |
+| `supabase migration new <name>` | Create a new migration file |
+| `supabase db reset` | Re-run all migrations locally from scratch (**most used — verifies your SQL is correct**) |
+| `supabase db push` | Push new local migrations to the remote |
+| `supabase db pull` | Diff remote changes back into a new migration |
+| `supabase db diff` | Show differences between the local DB and migrations |
 
 ---
 
-## RLS 测试 cookbook
+## RLS Testing Cookbook
 
-### 1. 看现在所有策略
+### 1. List all current policies
 
 ```sql
 select tablename, policyname, cmd, qual, with_check
@@ -105,110 +105,110 @@ where schemaname = 'public'
 order by tablename, cmd;
 ```
 
-### 2. 模拟"匿名用户"测试（应该被全部拒绝）
+### 2. Test as an "anonymous user" (everything should be denied)
 
-在 Studio 的 SQL Editor 里：
+In Studio's SQL Editor:
 
 ```sql
 set local role anon;
-select * from public.users;     -- 期望：返回 0 行（RLS 挡住）
-select * from public.reviews;   -- 期望：返回 0 行（reviews 策略要 authenticated）
+select * from public.users;     -- expected: 0 rows (blocked by RLS)
+select * from public.reviews;   -- expected: 0 rows (reviews policies require authenticated)
 reset role;
 ```
 
-### 3. 模拟"某个登录用户"测试
+### 3. Test as a "specific signed-in user"
 
 ```sql
--- 假装当前是 user_id = 'aaaaaaaa-...'
+-- Pretend the current user is user_id = 'aaaaaaaa-...'
 set local role authenticated;
 set local request.jwt.claims to '{"sub": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}';
 
 select * from public.reviews;
--- 期望：返回所有 is_visible=true 的 + 自己 user_id 的（含软删）
+-- expected: all rows with is_visible=true plus the user's own rows (including soft-deleted)
 
 insert into public.reviews (user_id, course_id, professor_id, semester, site, content_zh)
 values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '...', '...', '2025 Spring', 'SH', '测试');
--- 期望：失败 —— with_check 要求 user_id = auth.uid()
+-- expected: fails — with_check requires user_id = auth.uid()
 
 reset role;
 ```
 
-### 4. 验证 anon key 真的被 REST API 挡住
+### 4. Verify the anon key is actually blocked by the REST API
 
-启动本地 stack 后在浏览器 console 跑：
+After starting the local stack, run this in the browser console:
 
 ```js
 fetch('http://localhost:54321/rest/v1/users?select=*', {
-  headers: { apikey: '<本地 anon key>' }
+  headers: { apikey: '<local anon key>' }
 }).then(r => r.json()).then(console.log)
-// 期望：[] 空数组
+// expected: [] empty array
 ```
 
 ---
 
-## 常见坑
+## Common Pitfalls
 
-### VPN / 代理下远端 CLI 命令连不上
+### Remote CLI commands can't connect behind a VPN / proxy
 
-CLI 默认走 **IPv6 直连** 远端 DB（`db.<ref>.supabase.co:5432`）。如果你电脑跑着 VPN / 代理，IPv6 路由经常被打断，会报：
+The CLI connects to the remote DB over **direct IPv6** by default (`db.<ref>.supabase.co:5432`). If your machine is running a VPN / proxy, IPv6 routing often breaks, producing:
 
 ```
 failed to connect to postgres: ... tls error ... socket is not connected
 ```
 
-解决方法：用 Supabase **Session pooler**（IPv4）替代直连。
+Fix: use the Supabase **Session pooler** (IPv4) instead of the direct connection.
 
 1. `cp .env.cli.example .env.cli`
-2. 去 Supabase Dashboard 右上角 **Connect** → **Session pooler** tab，复制 URI
-3. 把里面的 `[YOUR-PASSWORD]` 换成你的数据库密码（建项目时设的）
-4. 粘到 `.env.cli` 的 `SUPABASE_DB_URL=` 后
+2. In the Supabase Dashboard, top right **Connect** → **Session pooler** tab, copy the URI
+3. Replace `[YOUR-PASSWORD]` in it with your database password (set when the project was created)
+4. Paste it after `SUPABASE_DB_URL=` in `.env.cli`
 
-`.env.cli` 已 gitignore，不会进 git。配好后用根目录的 [Makefile](../Makefile)：
+`.env.cli` is gitignored and won't be committed. Once configured, use the [Makefile](../Makefile) in the project root:
 
 ```bash
-make list      # 看 migration 对齐
-make push      # 推 migration
-make diff      # 看 schema 差异
+make list      # check migration alignment
+make push      # push migrations
+make diff      # show schema diff
 make repair MIG=20260521000001
 ```
 
-不配 `.env.cli` 时 `make` 命令自动跳过 `--db-url` flag，走 CLI 默认直连。所以 IPv6 网络 OK 的人可以完全不管这套。
+Without `.env.cli`, the `make` commands automatically skip the `--db-url` flag and fall back to the CLI's default direct connection. So if your IPv6 network is fine, you can ignore this entirely.
 
-### M1/M2 Mac Docker 慢
-`supabase start` 第一次拉 image 巨慢且耗内存。建议给 Docker Desktop 至少分配 4GB 内存（Settings → Resources）。
+### Docker is slow on M1/M2 Macs
+The first `supabase start` image pull is very slow and memory-hungry. Give Docker Desktop at least 4GB of memory (Settings → Resources).
 
-### 改了线上但没记进 migration
-有人手贱在 Supabase 控制台改了策略 → 本地 schema 和线上 drift。修复：
+### Changed production without recording a migration
+Someone edited a policy in the Supabase console → local schema drifts from production. Fix:
 
 ```bash
 supabase db pull
-# 把远端的变更 diff 出来生成一个新 migration 文件
-# review 后 commit 进 git
+# Diffs the remote changes into a new migration file
+# Review it, then commit it to git
 ```
 
-之后约定：**只能改 SQL 文件，绝不在控制台改**。
+Going forward, the rule is: **only change SQL files, never the console**.
 
-### Migration 顺序乱了
-CLI 用时间戳排序。如果你手写文件名（如 `003_xxx.sql`），跟时间戳混用时排序行为不确定。**全部用 `supabase migration new` 生成**，不要手写命名。
+### Migration ordering got mixed up
+The CLI sorts by timestamp. If you hand-write file names (like `003_xxx.sql`), mixing them with timestamps makes the ordering unpredictable. **Always generate files with `supabase migration new`** — never name them by hand.
 
-### 本地和线上的 anon key 不同
-本地是固定值（CLI 输出的，所有人都一样），线上是每个 Supabase 项目独立生成的。
-- `.env.local` 用本地 key（已预填在 `.env.example`）
-- 生产部署用你自己 Supabase 项目的 key（去控制台 Settings → API 抄）
+### Local and production anon keys differ
+The local key is a fixed value (printed by the CLI, same for everyone); production keys are generated per Supabase project.
+- `.env.local` uses the local key (pre-filled in `.env.example`)
+- Production deployments use your own Supabase project's key (copy it from console Settings → API)
 
-### `db reset` 把测试数据也清了
-预期行为。如果想保留 seed data，把测试数据写进 `supabase/seed.sql`，reset 后会自动跑。
+### `db reset` wipes test data too
+That's expected behavior. To keep seed data, put it in `supabase/seed.sql` — it runs automatically after every reset.
 
 ---
 
-## 一个 PR 的标准 workflow
+## Standard Workflow for a PR
 
-1. `supabase migration new <意图描述>` —— 生成新文件
-2. 编辑 SQL，写完
-3. `supabase db reset` —— 本地从头跑一遍验证
-4. 用 Studio / psql 测策略是否如预期工作
-5. 把对应应用代码改了（如新 endpoint）
+1. `supabase migration new <describe-the-intent>` — create the new file
+2. Edit the SQL until done
+3. `supabase db reset` — re-run everything locally from scratch to verify
+4. Test that the policies behave as expected with Studio / psql
+5. Make the corresponding application code changes (e.g. a new endpoint)
 6. `git add . && git commit && git push`
-7. 等 PR 通过 → `supabase db push` 推到生产（或 CI 自动做）
+7. Once the PR passes → `supabase db push` to production (or let CI do it)
 
-记住：**每个 SQL 改动都对应一个 migration 文件，每个 migration 文件只做一件事，文件名能看出意图**。
+Remember: **every SQL change corresponds to one migration file, every migration file does one thing, and the file name reveals the intent**.
