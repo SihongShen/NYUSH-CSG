@@ -1,0 +1,45 @@
+name: "🐛 Bug 报告 / Bug Report"
+description: 网站功能不符合预期？在这里报告 / Something not working as expected?
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！信息越具体，修得越快。
+        Thanks for reporting! The more specific, the faster we can fix it.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 发生了什么 / What happened
+      description: 描述你看到的问题，和你期望的行为
+      placeholder: 例：点击登录后显示"登录失败请重试"，但我用的是 NYU 邮箱
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      placeholder: |
+        1. 打开首页，切换校区到 New York
+        2. 点击某门课
+        3. ……
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: 出问题的页面地址 / Page URL
+      placeholder: https://nyush-csg.vercel.app/zh/courses/...
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图 / Screenshots
+      description: 直接把图片拖进来（如有报错弹窗务必截上）
+  - type: input
+    id: environment
+    attributes:
+      label: 浏览器和设备 / Browser & device
+      placeholder: 例：Chrome 130 / Windows 11；Safari / iPhone 15
+    validations:
+      required: true
