@@ -189,7 +189,9 @@
       "validation": {
         "newProfRequired": "Please enter the new professor name",
         "professorRequired": "Please select a professor",
-        "contentRequired": "Please fill in at least one of Chinese or English content"
+        "contentRequired": "Please fill in at least one of Chinese or English content",
+        "contentTooShort": "Please write at least {min} characters in total — more detail helps everyone",
+        "contentTooLong": "Each field is limited to {max} characters"
       },
       "toasts": {
         "submitted": "Review submitted",
@@ -234,7 +236,12 @@
     }
   },
   "anonymousId": {
-    "copyAria": "Copy anonymous ID"
+    "copyAria": "Copy anonymous ID",
+    "resetButton": "Get a new one",
+    "resetConfirmTitle": "Reset your anonymous ID?",
+    "resetConfirmDesc": "All your existing reviews will immediately show the new ID (the old one leaves no trace). This cannot be undone.",
+    "resetSuccess": "Anonymous ID reset",
+    "resetFailed": "Reset failed, please try again"
   },
   "chipInput": {
     "removeAria": "Remove {chip}"

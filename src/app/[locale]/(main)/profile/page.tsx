@@ -160,7 +160,7 @@ export default function ProfilePage() {
                 {meLoading ? (
                   <Skeleton className="h-6 w-32" />
                 ) : me?.anonymous_id ? (
-                  <AnonymousIdBadge anonymousId={me.anonymous_id} />
+                  <AnonymousIdBadge anonymousId={me.anonymous_id} allowReset />
                 ) : (
                   <span className="text-destructive">
                     {t('fields.cannotFetch')}

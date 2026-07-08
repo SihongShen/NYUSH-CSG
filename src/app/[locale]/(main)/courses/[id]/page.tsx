@@ -13,7 +13,6 @@ import { ReviewSubmitDialog } from '@/components/review/ReviewSubmitDialog';
 import { EmptyState } from '@/components/common/EmptyState';
 import { useAuth } from '@/hooks/useAuth';
 import { useCourse } from '@/hooks/useCourse';
-import { useReviews } from '@/hooks/useReviews';
 import { siteName } from '@/lib/constants/sites';
 import type { CourseDetail } from '@/types';
 
@@ -80,18 +79,16 @@ export default function CourseDetailPage({
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const t = useTranslations('course.detail');
+  // 详情 + 评价合并在一个请求里返回（GET /api/courses/[id]）
   const {
     course,
     loading: courseLoading,
     error: courseError,
     refetch: refetchCourse
   } = useCourse(id);
-  const {
-    reviews,
-    loading: reviewsLoading,
-    error: reviewsError,
-    refetch: refetchReviews
-  } = useReviews(id);
+  const reviews = course?.reviews ?? [];
+  const reviewsLoading = courseLoading;
+  const reviewsError = courseError;
 
   const [submitOpen, setSubmitOpen] = useState(false);
 
@@ -113,7 +110,6 @@ export default function CourseDetailPage({
 
   function refreshAll() {
     refetchCourse();
-    refetchReviews();
   }
 
   if (courseLoading) {

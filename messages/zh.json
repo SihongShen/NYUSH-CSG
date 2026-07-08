@@ -189,7 +189,9 @@
       "validation": {
         "newProfRequired": "请填写新教授名",
         "professorRequired": "请选择教授",
-        "contentRequired": "中文和英文评价至少填一个"
+        "contentRequired": "中文和英文评价至少填一个",
+        "contentTooShort": "评价内容合计至少 {min} 个字符，多写点帮助大家",
+        "contentTooLong": "单栏内容不能超过 {max} 个字符"
       },
       "toasts": {
         "submitted": "评价已提交",
@@ -234,7 +236,12 @@
     }
   },
   "anonymousId": {
-    "copyAria": "复制匿名 ID"
+    "copyAria": "复制匿名 ID",
+    "resetButton": "换一个",
+    "resetConfirmTitle": "确认更换匿名 ID？",
+    "resetConfirmDesc": "你之前发布的所有评价会立即显示新 ID（不会保留旧 ID 的痕迹），此操作不可撤销。",
+    "resetSuccess": "已更换新的匿名 ID",
+    "resetFailed": "更换失败，请重试"
   },
   "chipInput": {
     "removeAria": "移除 {chip}"

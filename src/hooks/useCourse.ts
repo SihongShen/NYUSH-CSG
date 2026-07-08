@@ -1,18 +1,18 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { CourseDetail } from '@/types';
+import type { CourseDetailWithReviews } from '@/types';
 
 export interface UseCourseReturn {
-  course: CourseDetail | null;
+  course: CourseDetailWithReviews | null;
   loading: boolean;
   error: string | null;
   refetch: () => void;
 }
 
-/** 拉单个课程详情（含 professors 列表）。 */
+/** 拉单个课程详情（含 professors、equivalents 和全部评价，一次请求）。 */
 export function useCourse(id: string | null): UseCourseReturn {
-  const [course, setCourse] = useState<CourseDetail | null>(null);
+  const [course, setCourse] = useState<CourseDetailWithReviews | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
@@ -33,7 +33,7 @@ export function useCourse(id: string | null): UseCourseReturn {
     fetch(`/api/courses/${id}`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json() as Promise<CourseDetail>;
+        return r.json() as Promise<CourseDetailWithReviews>;
       })
       .then((data) => {
         if (!cancelled) {
