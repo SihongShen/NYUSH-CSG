@@ -5,6 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { LocaleSwitcher } from '@/components/layout/LocaleSwitcher';
+import { Footer } from '@/components/layout/Footer';
+import { WaterGradient } from '@/components/auth/LoginEffects';
 
 const ORIGINAL_DOC_URL =
   'https://docs.google.com/document/d/1_46q2ZaguHqDbUTc0qgZt9BzO13IlvI1OLSGuiG0Pkg/edit?usp=sharing';
@@ -12,48 +14,57 @@ const ORIGINAL_DOC_URL =
 export default function LoginPage() {
   const t = useTranslations('auth');
 
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-nyu-violet/10 via-background to-nyu-violet/5 p-4">
-      <div className="w-full max-w-md">
-        <Card className="relative overflow-hidden">
-          {/* 顶部品牌条 */}
-          <div className="h-1.5 bg-nyu-violet" />
+  const card = (
+    <Card className="relative overflow-hidden">
+      {/* 顶部品牌条 */}
+      <div className="h-1.5 bg-nyu-violet" />
 
-          {/* 语言切换：贴在卡片右上角 */}
-          <div className="absolute right-2 top-3.5">
-            <Suspense>
-              <LocaleSwitcher className="h-7 px-2 text-xs text-muted-foreground" />
-            </Suspense>
-          </div>
-
-          <div className="px-6 pb-2 pt-6 text-center">
-            <div className="flex items-baseline justify-center gap-2">
-              <span className="rounded bg-nyu-violet px-1.5 py-0.5 text-lg font-extrabold leading-none text-nyu-violet-foreground">
-                NYU
-              </span>
-              <h1 className="text-xl font-semibold tracking-tight">
-                {t('title')}
-              </h1>
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t('subtitle')}
-            </p>
-          </div>
-
-          <CardContent className="pt-4">
-            {/* LoginForm 用 useSearchParams 读回调错误，需要 Suspense 边界 */}
-            <Suspense>
-              <LoginForm />
-            </Suspense>
-
-            <Separator className="my-4" />
-            <FeatureRow />
-          </CardContent>
-        </Card>
-
-        <CreditLine />
+      {/* 语言切换：贴在卡片右上角 */}
+      <div className="absolute right-2 top-3.5">
+        <Suspense>
+          <LocaleSwitcher className="h-7 px-2 text-xs text-muted-foreground" />
+        </Suspense>
       </div>
-    </main>
+
+      <div className="px-6 pb-2 pt-6 text-center">
+        <div className="flex items-baseline justify-center gap-2">
+          <span className="rounded bg-nyu-violet px-1.5 py-0.5 text-lg font-extrabold leading-none text-nyu-violet-foreground">
+            NYU
+          </span>
+          <h1 className="text-xl font-semibold tracking-tight">
+            {t('title')}
+          </h1>
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {t('subtitle')}
+        </p>
+      </div>
+
+      <CardContent className="pt-4">
+        {/* LoginForm 用 useSearchParams 读回调错误，需要 Suspense 边界 */}
+        <Suspense>
+          <LoginForm />
+        </Suspense>
+
+        <Separator className="my-4" />
+        <FeatureRow />
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="relative flex min-h-screen flex-col bg-gradient-to-br from-nyu-violet/50 via-nyu-violet/10 to-background">
+      {/* 可搅动的渐变水面（WebGL；不可用时 CSS 渐变兜底） */}
+      <WaterGradient />
+
+      <main className="relative flex flex-1 items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {card}
+          <CreditLine />
+        </div>
+      </main>
+      <Footer />
+    </div>
   );
 }
 

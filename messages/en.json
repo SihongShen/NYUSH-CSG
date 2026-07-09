@@ -58,6 +58,9 @@
     "loggedInAs": "Signed in as",
     "menu": {
       "profile": "Go to profile",
+      "reportBug": "Report a bug",
+      "featureRequest": "Suggest a feature",
+      "github": "GitHub repository",
       "logout": "Sign out"
     },
     "toasts": {
@@ -254,6 +257,10 @@
   },
   "chipInput": {
     "removeAria": "Remove {chip}"
+  },
+  "footer": {
+    "reportBug": "Report a bug",
+    "featureRequest": "Suggest a feature"
   },
   "backToTop": {
     "ariaLabel": "Back to top"
