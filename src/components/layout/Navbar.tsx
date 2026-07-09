@@ -5,8 +5,10 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
+  Bug,
   Check,
   ChevronDown,
+  Lightbulb,
   LogOut,
   Search,
   User as UserIcon,
@@ -27,6 +29,12 @@ import { cn } from '@/utils/cn';
 import { useCampus } from '@/components/providers/CampusProvider';
 import { createClient } from '@/utils/supabase-browser';
 import { SITES } from '@/lib/constants/sites';
+import {
+  GITHUB_BUG_URL,
+  GITHUB_FEATURE_URL,
+  GITHUB_REPO_URL
+} from '@/lib/constants/links';
+import { GitHubIcon } from '@/components/common/GitHubIcon';
 import type { CampusCode } from '@/types';
 import { LocaleSwitcher } from './LocaleSwitcher';
 
@@ -151,8 +159,23 @@ export function Navbar({ userEmail }: NavbarProps) {
           </div>
         </form>
 
-        {/* 右：语言 / 用户菜单 */}
+        {/* 右：GitHub / 语言 / 用户菜单 */}
         <nav className="flex items-center justify-self-end gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            asChild
+            className={cn('h-9 w-9 p-0', ON_VIOLET_BTN)}
+          >
+            <a
+              href={GITHUB_REPO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t('menu.github')}
+            >
+              <GitHubIcon className="h-4 w-4" />
+            </a>
+          </Button>
           <LocaleSwitcher className={ON_VIOLET_BTN} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -183,6 +206,34 @@ export function Navbar({ userEmail }: NavbarProps) {
                   <UserCircle className="mr-2 h-4 w-4" />
                   {t('menu.profile')}
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {/* 反馈入口：全部引导到 GitHub issue 表单 */}
+              <DropdownMenuItem asChild>
+                <a href={GITHUB_BUG_URL} target="_blank" rel="noopener noreferrer">
+                  <Bug className="mr-2 h-4 w-4" />
+                  {t('menu.reportBug')}
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href={GITHUB_FEATURE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Lightbulb className="mr-2 h-4 w-4" />
+                  {t('menu.featureRequest')}
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href={GITHUB_REPO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <GitHubIcon className="mr-2 h-4 w-4" />
+                  {t('menu.github')}
+                </a>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem

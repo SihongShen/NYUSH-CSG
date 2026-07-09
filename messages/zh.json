@@ -58,6 +58,9 @@
     "loggedInAs": "登录为",
     "menu": {
       "profile": "前往个人中心",
+      "reportBug": "报告问题",
+      "featureRequest": "功能建议",
+      "github": "GitHub 仓库",
       "logout": "退出登录"
     },
     "toasts": {
@@ -254,6 +257,10 @@
   },
   "chipInput": {
     "removeAria": "移除 {chip}"
+  },
+  "footer": {
+    "reportBug": "报告 Bug",
+    "featureRequest": "功能建议"
   },
   "backToTop": {
     "ariaLabel": "回到顶部"

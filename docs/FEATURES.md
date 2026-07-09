@@ -12,7 +12,7 @@
 
 **Entry**: Unauthenticated access to any route is redirected here by [middleware](../src/middleware.ts).
 
-**Main UI**: A single centered card on a soft violet gradient background. Inside the card, top to bottom:
+**Main UI**: A single centered card on a violet gradient background (deep violet top-left fading to light), with a mouse "wake" effect — moving the cursor leaves expanding ripple rings on a canvas layer (clicks splash a bigger one; disabled under prefers-reduced-motion). Inside the card, top to bottom:
 - A 1.5px NYU-violet brand bar across the top edge
 - Header: an "NYU" violet wordmark block + page title, subtitle below
 - Chinese / EN language switcher as a small ghost button pinned to the card's top-right corner (reuses the Navbar's LocaleSwitcher)
@@ -171,7 +171,11 @@ Your own review has [Edit] [Delete] in its top-right corner; others' reviews don
 ### Navbar (shown on every page except `/login`)
 - Left: **NYU + campus name dropdown** (switch among 16 sites); clicking NYU returns to `/`
 - Center: global search box (submit on Enter, preserves filter params)
-- Right: [Chinese / EN language switcher] · user menu (shows netid; expands to [Go to profile] / [Sign out])
+- Right: GitHub icon (links to the repository) · [Chinese / EN language switcher] · user menu (shows netid; expands to [Go to profile], feedback links [Report a bug] / [Suggest a feature] / [GitHub repository] — deep links to the issue forms — and [Sign out])
+
+### Footer (all pages, incl. login)
+- Left: © year + MIT License link
+- Right: [Report a bug] · [Suggest a feature] · [GitHub] — all feedback is routed to the GitHub issue forms (deep links open the structured templates directly)
 
 ### Toasts
 - Uses sonner (`components/ui/sonner.tsx`)
