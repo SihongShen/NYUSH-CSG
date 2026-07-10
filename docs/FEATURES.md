@@ -101,6 +101,8 @@ Filter state syncs to the URL query (e.g. `/?q=CSCI&major=CS,DS&core=GPS`) for s
 - After that: others' reviews by `created_at DESC` (switchable to oldest first / semester ascending or descending)
 - **Filter by professor**: options are derived from the loaded reviews (not the course's professor association table), so reviews aggregated from equivalent courses are filterable too; the filter only shows when there are ≥2 professors
 
+**Review card header** (roles made explicit to avoid misattribution): line 1 — professor name (bold) · semester · site (the review's subject); line 2 — user icon + the author's anonymous ID in small muted mono. Votes (helpful / not helpful) sit bottom-right.
+
 Your own review has [Edit] [Delete] in its top-right corner; others' reviews don't.
 
 **Write-review section**:
