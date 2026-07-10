@@ -102,6 +102,7 @@
     "detail": {
       "backToList": "返回课程列表",
       "professorsLabel": "教授：",
+      "topicsLabel": "历届专题：",
       "equivalentsLabel": "等同课程：",
       "info": {
         "title": "课程信息",
@@ -113,6 +114,16 @@
       },
       "notFoundTitle": "课程不存在",
       "notFoundDesc": "可能已删除或链接错误，请返回课程列表"
+    },
+    "edit": {
+      "title": "编辑课程分类",
+      "description": "修改 {code} 的专业 / Minor / Core / 通识归属。分类由大家共同维护，保存后立即生效。",
+      "button": "编辑分类",
+      "buttonEmpty": "补充分类",
+      "toasts": {
+        "success": "分类已更新",
+        "failed": "保存失败，请重试"
+      }
     },
     "submit": {
       "title": "添加课程",

@@ -61,6 +61,11 @@ export interface Course {
   core_type: CoreType[];
   // 通识选修标记
   is_general_elective: boolean;
+  /** 专题课的历届 topic 清单（如 Topics in IMA / EAP / WRIT-SHU 201）；
+   *  普通课程为空数组。由课表导入脚本维护，用户不可编辑 */
+  topics: string[];
+  /** 官方课程简介（NYU 课表目录）；同样由导入脚本维护，用户不可编辑 */
+  description: string | null;
   home_campus: CampusCode;
   is_verified: boolean;
   equivalent_id: string | null;
@@ -134,15 +139,19 @@ export interface ReviewWithCourse extends ReviewWithAuthor {
 // Request payloads (POST / PATCH body 形状)
 // ============================================================================
 
-export interface CourseApplyPayload {
-  code: string;
-  name_en: string;
-  home_campus: CampusCode;
+/** 课程分类五元组：建课时随 CourseApplyPayload 提交，也可单独 PATCH 编辑 */
+export interface CourseClassificationPayload {
   major_required: string[];
   major_elective: string[];
   minor: string[];
   core_type: CoreType[];
   is_general_elective: boolean;
+}
+
+export interface CourseApplyPayload extends CourseClassificationPayload {
+  code: string;
+  name_en: string;
+  home_campus: CampusCode;
   lecture_professors: string[];     // 至少 1 个，前端校验
   recitation_tas: string[];         // 可选；后端合并存入 professors
   /** 非上海课程可填上海等同课课号：库里有就关联，没有就自动建一门上海锚点课再关联 */

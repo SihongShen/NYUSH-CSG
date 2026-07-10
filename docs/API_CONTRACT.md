@@ -90,6 +90,17 @@ The domain restriction is enforced server-side by Supabase's `hook_before_user_c
 **200**: [`CourseDetailWithReviews`](../src/types/index.ts) — Course + `professors[]` + `equivalents[]` (other members of the equivalent-course group, excluding itself) + **`reviews: ReviewWithAuthor[]` (all reviews across the equivalent-course group, in a single request)**  
 **404**: Course does not exist  
 
+### `PATCH /api/courses/[id]`
+**Auth**: Login required  
+**Body**: [`CourseClassificationPayload`](../src/types/index.ts) `{ major_required[], major_elective[], minor[], core_type[], is_general_elective }`  
+**200**: `{ ok: true }`  
+**400**: `validation` — the resulting classification must keep at least one tag (incl. GE); invalid values are silently filtered against the constants lists  
+**401**: `unauthorized`  
+**404**: Course does not exist  
+**Business rules**:
+- Community-maintained: any logged-in user may edit any course's classification (same trust level as creating a course)
+- Only the five classification fields are accepted; code / name / campus etc. are not editable — enforced twice (API ignores extra fields, and the DB only grants `UPDATE` on the classification columns + `equivalent_id` to `authenticated`)
+
 ---
 
 ## Reviews

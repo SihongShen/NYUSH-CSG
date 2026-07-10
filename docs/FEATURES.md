@@ -92,6 +92,9 @@ Filter state syncs to the URL query (e.g. `/?q=CSCI&major=CS,DS&core=GPS`) for s
 **Main UI** (three sections, top to bottom):
 
 1. **Course info section**: back button, `code` as large heading, `name_en`, major / minor / core_type / GE badges, professor list, total review count (no quantitative rating), equivalent-course links (e.g. the same course at NY; clicking jumps to its detail page)
+   - **Edit classification** (community-maintained): an "Edit classification" button under the badges (reads "Add classification" when the course has none) opens a dialog with the same major / minor / core / GE controls as the add-course form; any logged-in user can edit; saving requires keeping at least one tag
+   - **Official description**: the catalog blurb from NYU's class search, shown under the classification badges; collapsed to 3 lines with an expand/collapse toggle when long; read-only, maintained by the import script
+   - **Topics offered** (topics-courses only, e.g. Topics in IMA / EAP / WRIT-SHU 201): a muted "Topics offered:" row lists the historical topic names pulled from the official catalog; read-only, maintained by the import script
    - **Equivalent-course review aggregation**: the review list automatically includes reviews from other campuses' courses in the equivalent-course group, distinguished by each review's site label
 2. **Review list section**: see "Sorting" below
 3. **Write-review section**: see "Writing a Review" below

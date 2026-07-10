@@ -160,7 +160,7 @@ export default function CourseDetailPage({
           </div>
         </SideNav>
         <div className="space-y-6">
-          <CourseDetailHeader course={course} />
+          <CourseDetailHeader course={course} onUpdated={refreshAll} />
 
           {/* 移动端：课程信息插在课程卡片下、写评价上 */}
           <div className="lg:hidden">
