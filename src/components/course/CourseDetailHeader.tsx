@@ -1,18 +1,37 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { CourseEditDialog } from './CourseEditDialog';
 import { formatProfessorName } from '@/utils/format';
 import { siteName } from '@/lib/constants/sites';
 import type { CourseDetail } from '@/types';
 
 export interface CourseDetailHeaderProps {
   course: CourseDetail;
+  /** 分类被编辑保存后回调（父组件 refetch） */
+  onUpdated: () => void;
 }
 
-export function CourseDetailHeader({ course }: CourseDetailHeaderProps) {
+export function CourseDetailHeader({
+  course,
+  onUpdated
+}: CourseDetailHeaderProps) {
   const t = useTranslations('course.detail');
+  const tEdit = useTranslations('course.edit');
+  const [editOpen, setEditOpen] = useState(false);
+
+  const unclassified =
+    course.major_required.length === 0 &&
+    course.major_elective.length === 0 &&
+    course.minor.length === 0 &&
+    course.core_type.length === 0 &&
+    !course.is_general_elective;
+
   return (
     <div>
       <h1 className="mt-3 text-2xl leading-tight">
@@ -36,7 +55,36 @@ export function CourseDetailHeader({ course }: CourseDetailHeaderProps) {
             <Badge variant="outline">General Elective</Badge>
           </li>
         )}
+        <li className="pt-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditOpen(true)}
+            className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <Pencil className="h-3 w-3" />
+            {unclassified ? tEdit('buttonEmpty') : tEdit('button')}
+          </Button>
+        </li>
       </ul>
+
+      <CourseEditDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        course={course}
+        onSaved={onUpdated}
+      />
+
+      {course.topics.length > 0 && (
+        <p className="mt-3 text-sm">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t('topicsLabel')}
+          </span>
+          <span className="ml-1 text-muted-foreground">
+            {course.topics.join(' · ')}
+          </span>
+        </p>
+      )}
 
       {course.professors.length > 0 && (
         <p className="mt-3 text-sm">

@@ -4,7 +4,6 @@ import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { ChevronDown } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -16,18 +15,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ChipInput } from '@/components/common/ChipInput';
 import { LoadingButton } from '@/components/common/LoadingButton';
 import { useCampus } from '@/components/providers/CampusProvider';
 import {
-  CORE_TYPES,
-  MAJORS,
-  MINORS,
-  type CoreType
-} from '@/lib/constants/majors';
+  ClassificationFields,
+  hasAnyClassification,
+  toClassificationPayload,
+  type ClassificationValue
+} from './ClassificationFields';
 import { siteName } from '@/lib/constants/sites';
-import { cn } from '@/utils/cn';
 
 export interface CourseSubmitDialogProps {
   open: boolean;
@@ -43,14 +40,19 @@ export function CourseSubmitDialog({
   const t = useTranslations('course.submit');
   const tCommon = useTranslations('common');
 
+  const EMPTY_CLASSIFICATION: ClassificationValue = {
+    major_required: [],
+    major_elective: [],
+    minor: [],
+    core_type: [],
+    is_general_elective: false
+  };
+
   const [code, setCode] = useState('');
   const [nameEn, setNameEn] = useState('');
   const [shEquivalentCode, setShEquivalentCode] = useState('');
-  const [majorRequired, setMajorRequired] = useState<string[]>([]);
-  const [majorElective, setMajorElective] = useState<string[]>([]);
-  const [minor, setMinor] = useState<string[]>([]);
-  const [coreType, setCoreType] = useState<string[]>([]);
-  const [isGE, setIsGE] = useState(false);
+  const [classification, setClassification] =
+    useState<ClassificationValue>(EMPTY_CLASSIFICATION);
   const [lectureProfs, setLectureProfs] = useState<string[]>([]);
   const [recitationTAs, setRecitationTAs] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -60,11 +62,7 @@ export function CourseSubmitDialog({
     setCode('');
     setNameEn('');
     setShEquivalentCode('');
-    setMajorRequired([]);
-    setMajorElective([]);
-    setMinor([]);
-    setCoreType([]);
-    setIsGE(false);
+    setClassification(EMPTY_CLASSIFICATION);
     setLectureProfs([]);
     setRecitationTAs([]);
     setErrors({});
@@ -79,13 +77,7 @@ export function CourseSubmitDialog({
     const errs: Record<string, string> = {};
     if (!code.trim()) errs.code = t('validation.codeRequired');
     if (nameEn.trim().length < 3) errs.name_en = t('validation.nameTooShort');
-    if (
-      majorRequired.length === 0 &&
-      majorElective.length === 0 &&
-      minor.length === 0 &&
-      coreType.length === 0 &&
-      !isGE
-    ) {
+    if (!hasAnyClassification(classification)) {
       errs.classification = t('validation.classificationRequired');
     }
     if (lectureProfs.length === 0) {
@@ -107,11 +99,7 @@ export function CourseSubmitDialog({
         code: code.trim(),
         name_en: nameEn.trim(),
         home_campus: campus,
-        major_required: majorRequired,
-        major_elective: majorElective,
-        minor,
-        core_type: coreType as CoreType[],
-        is_general_elective: isGE,
+        ...toClassificationPayload(classification),
         lecture_professors: lectureProfs,
         recitation_tas: recitationTAs,
         // 非上海校区可关联上海等同课；上海本部建课时不发这个字段
@@ -236,42 +224,11 @@ export function CourseSubmitDialog({
             {/* ─────────── 课程分类 ─────────── */}
             <Section>
               <Label>{t('fields.classification')}</Label>
-              <div className="space-y-2">
-                <CollapsibleCheckList
-                  title="Major Required"
-                  options={MAJORS}
-                  selected={majorRequired}
-                  onChange={setMajorRequired}
-                />
-                <CollapsibleCheckList
-                  title="Major Elective"
-                  options={MAJORS}
-                  selected={majorElective}
-                  onChange={setMajorElective}
-                />
-                <CollapsibleCheckList
-                  title="Minor"
-                  options={MINORS}
-                  selected={minor}
-                  onChange={setMinor}
-                />
-                <CollapsibleCheckList
-                  title="Core Type"
-                  options={[...CORE_TYPES]}
-                  selected={coreType}
-                  onChange={setCoreType}
-                />
-                <label className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 hover:bg-accent">
-                  <Checkbox
-                    checked={isGE}
-                    onCheckedChange={(v) => setIsGE(v === true)}
-                  />
-                  <span className="text-sm font-medium">General Electives</span>
-                </label>
-              </div>
-              {errors.classification && (
-                <p className="text-xs text-destructive">{errors.classification}</p>
-              )}
+              <ClassificationFields
+                value={classification}
+                onChange={setClassification}
+                error={errors.classification}
+              />
             </Section>
 
             {/* ─────────── 授课老师 ─────────── */}
@@ -360,67 +317,3 @@ function Field({
   );
 }
 
-function CollapsibleCheckList({
-  title,
-  options,
-  selected,
-  onChange
-}: {
-  title: string;
-  options: readonly string[];
-  selected: string[];
-  onChange: (next: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-
-  function toggle(value: string, on: boolean) {
-    onChange(
-      on
-        ? Array.from(new Set([...selected, value]))
-        : selected.filter((v) => v !== value)
-    );
-  }
-
-  return (
-    <div className="rounded-md border">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium hover:bg-accent"
-        aria-expanded={open}
-      >
-        <span>
-          {title}
-          {selected.length > 0 && (
-            <span className="ml-2 text-muted-foreground">
-              ({selected.length})
-            </span>
-          )}
-        </span>
-        <ChevronDown
-          className={cn(
-            'h-4 w-4 text-muted-foreground transition-transform',
-            open && 'rotate-180'
-          )}
-        />
-      </button>
-      {open && (
-        // 限高 + 自带滚动 + 两列：长列表（19 个 major）不再被弹窗底部裁掉
-        <div className="grid max-h-56 grid-cols-1 gap-x-3 gap-y-1 overflow-y-auto border-t px-3 py-2 sm:grid-cols-2">
-          {options.map((opt) => (
-            <label
-              key={opt}
-              className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-accent"
-            >
-              <Checkbox
-                checked={selected.includes(opt)}
-                onCheckedChange={(v) => toggle(opt, v === true)}
-              />
-              <span className="text-sm">{opt}</span>
-            </label>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

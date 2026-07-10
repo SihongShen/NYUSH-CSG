@@ -188,7 +188,7 @@ From lightest to heaviest change, in **order of preference**:
 
 **Equivalent-course mapping**: star topology — a non-Shanghai course's `equivalent_id` points to a Shanghai anchor course; triggers forbid self-reference, chains, and re-pointing anchors. When creating a course, entering the Shanghai course code links it self-service (if it doesn't exist, an anchor course with the same name is auto-created); later adjustments currently require a maintainer.
 
-**RLS highlights** (full definitions in the migration files): all tables authenticated-only; users can read only themselves and never write (writes go through triggers and the `reset_anonymous_id()` function); reviews readable if visible or one's own, writable/editable only by the author, hard deletes forbidden; review_votes readable by everyone, insert/update/delete restricted to oneself; the auth hook `hook_before_user_created` rejects non-@nyu.edu accounts.
+**RLS highlights** (full definitions in the migration files): all tables authenticated-only; users can read only themselves and never write (writes go through triggers and the `reset_anonymous_id()` function); courses readable/creatable by everyone, and updatable by everyone but **only on the classification columns + `equivalent_id`** (column-level `GRANT UPDATE` — code/name/created_by stay read-only; this also makes the sh-equivalent linking in `createCourse` work under RLS); reviews readable if visible or one's own, writable/editable only by the author, hard deletes forbidden; review_votes readable by everyone, insert/update/delete restricted to oneself; the auth hook `hook_before_user_created` rejects non-@nyu.edu accounts.
 
 ---
 

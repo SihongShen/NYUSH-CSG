@@ -5,6 +5,7 @@ import type {
   CoreType,
   Course,
   CourseApplyPayload,
+  CourseClassificationPayload,
   CourseDetail,
   CourseWithStats,
   EquivalentCourse,
@@ -301,4 +302,31 @@ export async function createCourse(
   }
 
   return { id: courseId };
+}
+
+/**
+ * 更新课程分类（major / minor / core / GE 五列）。
+ * DB 侧 authenticated 只被 grant 了这几列的 UPDATE 权限，
+ * 课号 / 课名等字段在数据库层就改不了。
+ *
+ * @returns false = 课程不存在（API 转 404）
+ */
+export async function updateCourseClassification(
+  id: string,
+  payload: CourseClassificationPayload
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('courses')
+    .update({
+      major_required: payload.major_required,
+      major_elective: payload.major_elective,
+      minor: payload.minor,
+      core_type: payload.core_type,
+      is_general_elective: payload.is_general_elective
+    })
+    .eq('id', id)
+    .select('id');
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
 }

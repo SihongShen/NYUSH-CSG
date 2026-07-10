@@ -102,6 +102,7 @@
     "detail": {
       "backToList": "Back to courses",
       "professorsLabel": "Professors:",
+      "topicsLabel": "Topics offered:",
       "equivalentsLabel": "Equivalent courses:",
       "info": {
         "title": "Course info",
@@ -113,6 +114,16 @@
       },
       "notFoundTitle": "Course not found",
       "notFoundDesc": "It may have been removed or the link is wrong. Please go back to the course list."
+    },
+    "edit": {
+      "title": "Edit course classification",
+      "description": "Update the major / minor / core / general-elective tags of {code}. Classifications are community-maintained; changes apply immediately.",
+      "button": "Edit classification",
+      "buttonEmpty": "Add classification",
+      "toasts": {
+        "success": "Classification updated",
+        "failed": "Save failed, please try again"
+      }
     },
     "submit": {
       "title": "Add a course",
