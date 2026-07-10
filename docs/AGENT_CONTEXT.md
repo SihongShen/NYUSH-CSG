@@ -79,19 +79,25 @@ export async function POST(request: Request) {
 
 ### Frontend Hook Pattern
 
+Client data hooks only call `/api/` routes (never import `lib/`) and go through
+`useCachedFetch` (`src/hooks/useCachedFetch.ts`) — a module-level in-memory
+SWR-lite cache: cached data renders instantly, then revalidates in the
+background (no skeleton flash on revisits; needed because Supabase is in US
+West and users are mostly in Asia).
+
 ```typescript
-// src/hooks/useReviews.ts
-// only calls /api/ routes, never imports lib/
-export function useReviews(courseId: string) {
-  const [reviews, setReviews] = useState([])
-  useEffect(() => {
-    fetch(`/api/reviews?courseId=${courseId}`)
-      .then(r => r.json())
-      .then(setReviews)
-  }, [courseId])
-  return reviews
+// src/hooks/useCourse.ts
+export function useCourse(id: string | null) {
+  const { data, loading, error, refetch } =
+    useCachedFetch<CourseDetailWithReviews>(id ? `/api/courses/${id}` : null);
+  return { course: data, loading, error, refetch };
 }
 ```
+
+Rules:
+- After a mutation, call the hook's `refetch()` — it fetches and rewrites the cache in place.
+- Sign-out must call `clearFetchCache()` (already wired in `useAuth.signOut` and the Navbar) so the next account never sees the previous account's data.
+- `useCourses` caches the accumulated load-more list per filter combination and restores its depth on revisit.
 
 ### How to Modify shadcn Components
 

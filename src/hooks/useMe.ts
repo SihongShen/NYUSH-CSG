@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCachedFetch } from './useCachedFetch';
 
 export interface MeProfile {
   id: string;
@@ -15,39 +15,11 @@ export interface UseMeReturn {
   refetch: () => void;
 }
 
-/** 拉当前登录用户的基本信息（含 anonymous_id），用于 profile 页 badge。 */
+/**
+ * 拉当前登录用户的基本信息（含 anonymous_id），用于 profile 页 badge。
+ * 走内存缓存（登出时由 clearFetchCache 清空，不会串账号）。
+ */
 export function useMe(): UseMeReturn {
-  const [me, setMe] = useState<MeProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [tick, setTick] = useState(0);
-
-  const refetch = useCallback(() => setTick((t) => t + 1), []);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/me')
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json() as Promise<MeProfile>;
-      })
-      .then((data) => {
-        if (!cancelled) {
-          setMe(data);
-          setLoading(false);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'fetch failed');
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [tick]);
-
-  return { me, loading, error, refetch };
+  const { data, loading, error, refetch } = useCachedFetch<MeProfile>('/api/me');
+  return { me: data, loading, error, refetch };
 }

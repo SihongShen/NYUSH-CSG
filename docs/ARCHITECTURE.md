@@ -28,7 +28,7 @@ A course review and history archive platform for NYU Shanghai. Semi-closed (logi
 | Backend | Next.js API Routes | All backend logic lives in `src/app/api/` |
 | Database | Supabase (PostgreSQL) | No Prisma; use the Supabase JS client directly |
 | Auth | Supabase Auth | Google OAuth (NYU Google Workspace accounts); a server-side hook enforces the @nyu.edu domain |
-| Deployment | Vercel | Auto-deploys from GitHub |
+| Deployment | Vercel | Auto-deploys from GitHub; serverless functions pinned to `pdx1` (Oregon, `vercel.json`) to sit next to the Supabase project (West US) — keeps the multiple sequential DB round trips per API request at ~1ms instead of ~80ms cross-US |
 
 ---
 

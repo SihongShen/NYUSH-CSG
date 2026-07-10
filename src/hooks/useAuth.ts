@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Session, User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase-browser';
+import { clearFetchCache } from './useCachedFetch';
 
 export interface UseAuthReturn {
   user: User | null;
@@ -50,6 +51,7 @@ export function useAuth(): UseAuthReturn {
     const supabase = createClient();
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    clearFetchCache(); // 防止下一个账号看到上一个账号的缓存数据
     router.replace('/login');
     router.refresh();
   }
