@@ -3,7 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Pencil, RotateCcw, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
+import {
+  Pencil,
+  RotateCcw,
+  ThumbsDown,
+  ThumbsUp,
+  Trash2,
+  UserCircle
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -149,20 +156,28 @@ export function ReviewCard({
       )}
 
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-0.5">
-          {/* 第一行：用户名（黑色，大一号） */}
-          <p className="truncate font-mono text-base font-semibold text-foreground">
-            {review.author_anonymous_id ?? t('deletedAuthor')}
-          </p>
-          {/* 第二行：教授 · 学期 · 校区（小一号） */}
-          <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted-foreground">
-            <span className="text-foreground/80">
+        <div className="min-w-0 space-y-1">
+          {/* 第一行：教授 · 学期 · 校区（评价对象，醒目）——教授名放
+              "作者位"容易被误读成发帖人，靠第二行的用户图标区分角色 */}
+          <p className="flex flex-wrap items-baseline gap-x-2">
+            <span className="text-base font-semibold text-foreground">
               {formatProfessorName(review.professor_name_en)}
             </span>
-            <span>·</span>
-            <span>{review.semester}</span>
-            <span>·</span>
-            <span>{siteName(review.site)}</span>
+            <span className="text-sm text-muted-foreground">·</span>
+            <span className="text-sm text-muted-foreground">
+              {review.semester}
+            </span>
+            <span className="text-sm text-muted-foreground">·</span>
+            <span className="text-sm text-muted-foreground">
+              {siteName(review.site)}
+            </span>
+          </p>
+          {/* 第二行：发帖人匿名 ID（用户图标标明这是身份代号） */}
+          <p className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+            <UserCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span className="truncate">
+              {review.author_anonymous_id ?? t('deletedAuthor')}
+            </span>
           </p>
         </div>
 

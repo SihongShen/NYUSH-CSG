@@ -28,6 +28,7 @@ import {
 import { cn } from '@/utils/cn';
 import { useCampus } from '@/components/providers/CampusProvider';
 import { createClient } from '@/utils/supabase-browser';
+import { clearFetchCache } from '@/hooks/useCachedFetch';
 import { SITES } from '@/lib/constants/sites';
 import {
   GITHUB_BUG_URL,
@@ -72,6 +73,7 @@ export function Navbar({ userEmail }: NavbarProps) {
       return;
     }
     toast.success(t('toasts.loggedOut'));
+    clearFetchCache(); // 防止下一个账号看到上一个账号的缓存数据
     router.replace('/login');
     router.refresh();
   }

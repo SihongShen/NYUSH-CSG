@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { readFetchCache, writeFetchCache } from './useCachedFetch';
 import type { CampusCode, CoreType, CourseWithStats, Paginated } from '@/types';
 
 const PAGE_SIZE = 20;
@@ -26,6 +27,11 @@ export interface UseCoursesReturn {
   loadMore: () => void;
 }
 
+interface CachedList {
+  items: CourseWithStats[];
+  total: number;
+}
+
 function buildQueryString(
   params: UseCoursesParams,
   offset: number,
@@ -48,6 +54,8 @@ function buildQueryString(
  * - loadMore() 拉下一页并追加，同时把已加载条数写进 URL 的 ?n=
  *   （replace，不产生历史记录）——从课程详情返回时按 n 恢复列表深度
  * - 筛选条件变化时重置到第一页并清掉 n
+ * - 每组筛选条件的累积结果进内存缓存：切回时先渲染缓存（保留深度），
+ *   后台按相同深度静默刷新，不闪骨架
  */
 export function useCourses(params: UseCoursesParams): UseCoursesReturn {
   const router = useRouter();
@@ -63,6 +71,8 @@ export function useCourses(params: UseCoursesParams): UseCoursesReturn {
   const key = JSON.stringify(params);
   // 请求代际计数：筛选变化后，旧的 loadMore 响应直接丢弃
   const generation = useRef(0);
+  // setItems 的同步镜像：追加合并和缓存回写都从这里读，避免闭包旧值
+  const itemsRef = useRef<CourseWithStats[] | null>(null);
   // 挂载时从 URL 恢复已加载条数（仅首屏用一次）
   const initialCount = useRef<number>(
     Math.min(
@@ -85,12 +95,18 @@ export function useCourses(params: UseCoursesParams): UseCoursesReturn {
   );
 
   const fetchPage = useCallback(
-    (currentKey: string, offset: number, append: boolean, limit: number) => {
+    (
+      currentKey: string,
+      offset: number,
+      append: boolean,
+      limit: number,
+      silent = false // 已有缓存数据时的后台刷新：不动 loading / error，失败静默
+    ) => {
       const gen = ++generation.current;
       const current: UseCoursesParams = JSON.parse(currentKey);
 
       if (append) setLoadingMore(true);
-      else {
+      else if (!silent) {
         setLoading(true);
         setError(null);
       }
@@ -102,16 +118,25 @@ export function useCourses(params: UseCoursesParams): UseCoursesReturn {
         })
         .then((json) => {
           if (gen !== generation.current) return;
+          const merged =
+            append && itemsRef.current
+              ? [...itemsRef.current, ...json.items]
+              : json.items;
+          itemsRef.current = merged;
+          setItems(merged);
           setTotal(json.total);
-          setItems((prev) =>
-            append && prev ? [...prev, ...json.items] : json.items
-          );
+          writeFetchCache<CachedList>(`courses:${currentKey}`, {
+            items: merged,
+            total: json.total
+          });
           setLoading(false);
           setLoadingMore(false);
         })
         .catch((err: unknown) => {
           if (gen !== generation.current) return;
-          setError(err instanceof Error ? err.message : 'fetch failed');
+          if (!silent) {
+            setError(err instanceof Error ? err.message : 'fetch failed');
+          }
           setLoading(false);
           setLoadingMore(false);
         });
@@ -120,10 +145,26 @@ export function useCourses(params: UseCoursesParams): UseCoursesReturn {
   );
 
   useEffect(() => {
+    const isFirst = firstLoad.current;
+    firstLoad.current = false;
+
+    const cached = readFetchCache<CachedList>(`courses:${key}`);
+    if (cached) {
+      // 命中缓存：立即渲染（保留之前的加载深度），后台按相同深度刷新
+      itemsRef.current = cached.items;
+      setItems(cached.items);
+      setTotal(cached.total);
+      setLoading(false);
+      setError(null);
+      fetchPage(key, 0, false, Math.min(Math.max(cached.items.length, PAGE_SIZE), MAX_RESTORE), true);
+      if (!isFirst) syncCountToUrl(cached.items.length);
+      return;
+    }
+
+    itemsRef.current = null;
     setItems(null);
-    if (firstLoad.current) {
+    if (isFirst) {
       // 首屏：按 URL 里的 n 一次性恢复到之前的深度
-      firstLoad.current = false;
       fetchPage(key, 0, false, initialCount.current);
     } else {
       // 筛选变化：回到第一页，清掉 URL 里的 n
