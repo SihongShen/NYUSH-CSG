@@ -75,6 +75,8 @@ export function CourseDetailHeader({
         onSaved={onUpdated}
       />
 
+      {course.description && <CourseDescription text={course.description} />}
+
       {course.topics.length > 0 && (
         <p className="mt-3 text-sm">
           <span className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -119,6 +121,35 @@ export function CourseDetailHeader({
             ))}
           </span>
         </p>
+      )}
+    </div>
+  );
+}
+
+/** 官方课程简介：默认折叠 3 行，可展开/收起 */
+function CourseDescription({ text }: { text: string }) {
+  const tCommon = useTranslations('common');
+  const [expanded, setExpanded] = useState(false);
+  // 短简介不需要折叠交互（3 行 ≈ 240 字符的保守估计）
+  const collapsible = text.length > 240;
+  return (
+    <div className="mt-3">
+      <p
+        className={
+          'whitespace-pre-wrap text-sm text-muted-foreground' +
+          (collapsible && !expanded ? ' line-clamp-3' : '')
+        }
+      >
+        {text}
+      </p>
+      {collapsible && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-1 text-xs text-nyu-violet underline-offset-2 hover:underline"
+        >
+          {expanded ? tCommon('actions.collapse') : tCommon('actions.expand')}
+        </button>
       )}
     </div>
   );

@@ -64,6 +64,8 @@ export interface Course {
   /** 专题课的历届 topic 清单（如 Topics in IMA / EAP / WRIT-SHU 201）；
    *  普通课程为空数组。由课表导入脚本维护，用户不可编辑 */
   topics: string[];
+  /** 官方课程简介（NYU 课表目录）；同样由导入脚本维护，用户不可编辑 */
+  description: string | null;
   home_campus: CampusCode;
   is_verified: boolean;
   equivalent_id: string | null;

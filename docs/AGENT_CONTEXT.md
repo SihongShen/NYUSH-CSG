@@ -146,7 +146,7 @@ export async function getReviews(courseId: string) {
 | Table | Key columns | Notes |
 |------|---------|------|
 | users | id, email, anonymous_id, role | anonymous_id is the only identity visible on the frontend |
-| courses | id, code, name_en, home_campus, major_required[], major_elective[], minor[], core_type[], is_general_elective, topics[], is_verified, equivalent_id, created_by | UNIQUE (home_campus, code); equivalent_id points star-style at the Shanghai anchor course (triggers prevent cycles/chains); topics[] = historical topic list for topics-courses, maintained by the catalog import script only (not user-editable) |
+| courses | id, code, name_en, home_campus, major_required[], major_elective[], minor[], core_type[], is_general_elective, topics[], description, is_verified, equivalent_id, created_by | UNIQUE (home_campus, code); equivalent_id points star-style at the Shanghai anchor course (triggers prevent cycles/chains); topics[] (historical topic list for topics-courses) and description (official catalog blurb) are maintained by the catalog import script only (not user-editable) |
 | professors | id, name_en, is_verified | **name_en stored lowercase + UNIQUE**; use `formatProfessorName()` (utils/format.ts) for display |
 | course_professor | course_id, professor_id | many-to-many join table |
 | reviews | id, user_id, course_id, professor_id, semester, site, content_zh, content_en, is_visible | is_visible=false means soft-deleted; UNIQUE (user_id, course_id, professor_id, semester) |
