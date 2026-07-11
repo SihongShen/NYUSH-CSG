@@ -148,6 +148,7 @@ export async function getReviews(courseId: string) {
 | users | id, email, anonymous_id, role | anonymous_id is the only identity visible on the frontend |
 | courses | id, code, name_en, home_campus, major_required[], major_elective[], minor[], core_type[], is_general_elective, topics[], description, is_verified, equivalent_id, created_by | UNIQUE (home_campus, code); equivalent_id points star-style at the Shanghai anchor course (triggers prevent cycles/chains); topics[] (historical topic list for topics-courses) and description (official catalog blurb) are maintained by the catalog import script only (not user-editable) |
 | professors | id, name_en, is_verified | **name_en stored lowercase + UNIQUE**; use `formatProfessorName()` (utils/format.ts) for display |
+| review_feed (view) | review columns w/o user_id + author_anonymous_id, professor_name_en, course_code, course_name_en, is_own | **Read reviews through this view, never the table** — `reviews.user_id` is hidden from clients (anonymity); `is_own` is computed server-side from `auth.uid()` |
 | course_professor | course_id, professor_id | many-to-many join table |
 | reviews | id, user_id, course_id, professor_id, semester, site, content_zh, content_en, is_visible | is_visible=false means soft-deleted; UNIQUE (user_id, course_id, professor_id, semester) |
 | review_votes | review_id, user_id, vote(±1) | PK (review_id, user_id), one vote per person per review |

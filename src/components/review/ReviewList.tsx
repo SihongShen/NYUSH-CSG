@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
@@ -98,7 +97,6 @@ export function ReviewList({
   onWriteReview,
   onUpdated
 }: ReviewListProps) {
-  const { user } = useAuth();
   const t = useTranslations('review.list');
   const tCommon = useTranslations('common');
   const [profValue, setProfValue] = useState<string>(ALL_PROFS);
@@ -132,14 +130,14 @@ export function ReviewList({
     const mine: ReviewWithAuthor[] = [];
     const others: ReviewWithAuthor[] = [];
     for (const r of processed) {
-      if (user && r.user_id === user.id) {
+      if (r.is_own) {
         mine.push(r);
       } else {
         others.push(r);
       }
     }
     return { mine, others };
-  }, [processed, user]);
+  }, [processed]);
 
   if (loading) {
     return (

@@ -113,8 +113,8 @@ The domain restriction is enforced server-side by Supabase's `hook_before_user_c
 **401**: `unauthorized` (not logged in)  
 **Business rules**:
 - Each item includes vote stats: `upvotes` / `downvotes` / `my_vote` (the current user's vote: 1 / -1 / 0)
-- Visibility is controlled by RLS: rows with `is_visible = true`, or the user's own (including soft-deleted)
-- Authors are displayed as `author_anonymous_id` (looked up via the `get_anonymous_id()` function; email is never exposed)
+- Visibility is controlled by the `review_feed` view: rows with `is_visible = true`, or the user's own (including soft-deleted)
+- **Anonymity: review payloads never contain the author's `user_id`** (the auth UUID stays in the DB — otherwise a reader could correlate reviews across an anonymous-ID reset). Authors are exposed only as `author_anonymous_id`, and ownership only as the server-computed boolean `is_own`
 - Sort: `created_at DESC`
 
 ### `POST /api/reviews`

@@ -11,7 +11,6 @@ import { CourseDetailHeader } from '@/components/course/CourseDetailHeader';
 import { ReviewList } from '@/components/review/ReviewList';
 import { ReviewSubmitDialog } from '@/components/review/ReviewSubmitDialog';
 import { EmptyState } from '@/components/common/EmptyState';
-import { useAuth } from '@/hooks/useAuth';
 import { useCourse } from '@/hooks/useCourse';
 import { siteName } from '@/lib/constants/sites';
 import type { CourseDetail } from '@/types';
@@ -77,7 +76,6 @@ export default function CourseDetailPage({
 }) {
   const { id } = params;
   const searchParams = useSearchParams();
-  const { user } = useAuth();
   const t = useTranslations('course.detail');
   // 详情 + 评价合并在一个请求里返回（GET /api/courses/[id]）
   const {
@@ -93,7 +91,7 @@ export default function CourseDetailPage({
 
   const [submitOpen, setSubmitOpen] = useState(false);
 
-  const hasOwnReview = !!user && reviews.some((r) => r.user_id === user.id);
+  const hasOwnReview = reviews.some((r) => r.is_own);
 
   // ?focus=review → 评价加载完后滚动到「我的评价」区块（profile 页跳过来用）
   const focusedRef = useRef(false);
