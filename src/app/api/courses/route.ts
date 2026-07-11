@@ -150,7 +150,7 @@ export async function POST(request: Request) {
   // 4. 速率限制：每人每小时最多 N 门
   try {
     if (
-      await isOverHourlyLimit('courses', 'created_by', userId, HOURLY_LIMITS.courses)
+      await isOverHourlyLimit('courses', userId, HOURLY_LIMITS.courses)
     ) {
       return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
     }

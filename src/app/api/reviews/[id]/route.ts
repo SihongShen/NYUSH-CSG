@@ -19,10 +19,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let userId: string;
   try {
-    const user = await requireUser();
-    userId = user.id;
+    await requireUser();
   } catch {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
@@ -43,9 +41,9 @@ export async function PATCH(
   if (typeof body.is_visible === 'boolean') {
     try {
       if (body.is_visible) {
-        await restoreReview(id, userId);
+        await restoreReview(id);
       } else {
-        await softDeleteReview(id, userId);
+        await softDeleteReview(id);
       }
       return NextResponse.json({ ok: true });
     } catch (err) {
@@ -74,14 +72,10 @@ export async function PATCH(
   }
 
   try {
-    await updateReview(
-      id,
-      {
-        content_zh: content_zh || undefined,
-        content_en: content_en || undefined
-      },
-      userId
-    );
+    await updateReview(id, {
+      content_zh: content_zh || undefined,
+      content_en: content_en || undefined
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof Error && err.message === 'review_not_found') {

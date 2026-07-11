@@ -80,7 +80,8 @@ export interface Professor {
 
 export interface Review {
   id: string;
-  user_id: string;
+  // 注意：没有 user_id —— 作者真实 UUID 不出库（匿名性），
+  // 归属判断用 ReviewWithAuthor.is_own（review_feed 视图按 auth.uid() 算）
   course_id: string;
   professor_id: string;
   semester: string;         // "2024 Fall" | "2025 Spring" 等
@@ -124,6 +125,7 @@ export interface CourseDetailWithReviews extends CourseDetail {
 export interface ReviewWithAuthor extends Review {
   author_anonymous_id: string | null;   // null = 作者已注销，前端显示 "[已注销用户]"
   professor_name_en: string;
+  is_own: boolean;                      // 是否当前用户写的（服务端算好，不暴露 user_id）
   upvotes: number;
   downvotes: number;
   my_vote: VoteValue;                   // 当前用户对这条评价的投票

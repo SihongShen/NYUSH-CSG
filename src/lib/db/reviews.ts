@@ -102,33 +102,16 @@ export async function listReviewsForCourseIds(
 ): Promise<ReviewWithAuthor[]> {
   const supabase = await createClient();
 
+  // review_feed 视图：作者匿名 ID / 教授名已 join 好，is_own 服务端算好，
+  // 不含 user_id（匿名性：作者真实 UUID 不出库）
   const { data, error } = await supabase
-    .from('reviews')
-    .select('*, professors(id, name_en)')
+    .from('review_feed')
+    .select('*')
     .in('course_id', courseIds)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
   if (!data) return [];
-
-  // 批量取 anonymous_id（N 个 unique user 调 N 次；小规模可接受）
-  const uniqueUserIds = Array.from(
-    new Set(
-      data
-        .map((r: { user_id: string | null }) => r.user_id)
-        .filter((id): id is string => !!id)
-    )
-  );
-
-  const anonMap = new Map<string, string | null>();
-  await Promise.all(
-    uniqueUserIds.map(async (uid) => {
-      const { data: anon } = await supabase.rpc('get_anonymous_id', {
-        p_user_id: uid
-      });
-      anonMap.set(uid, (anon as string | null) ?? null);
-    })
-  );
 
   const voteStats = await fetchVoteStats(
     supabase,
@@ -138,12 +121,9 @@ export async function listReviewsForCourseIds(
 
   return data.map((r) => {
     const row = r as Record<string, unknown>;
-    const prof = row.professors as { name_en?: string } | null;
-    const userId = row.user_id as string | null;
     const votes = voteStats.get(row.id as string) ?? EMPTY_VOTES;
     return {
       id: row.id as string,
-      user_id: userId as string,
       course_id: row.course_id as string,
       professor_id: row.professor_id as string,
       semester: row.semester as string,
@@ -152,8 +132,9 @@ export async function listReviewsForCourseIds(
       content_en: (row.content_en as string | null) ?? null,
       is_visible: row.is_visible as boolean,
       created_at: row.created_at as string,
-      author_anonymous_id: userId ? anonMap.get(userId) ?? null : null,
-      professor_name_en: prof?.name_en ?? '',
+      author_anonymous_id: (row.author_anonymous_id as string | null) ?? null,
+      professor_name_en: (row.professor_name_en as string | null) ?? '',
+      is_own: row.is_own === true,
       ...votes
     };
   });
@@ -170,21 +151,15 @@ export async function listReviewsForUser(
 ): Promise<ReviewWithCourse[]> {
   const supabase = await createClient();
 
+  // is_own 由视图按 auth.uid() 算出，等价于原来的 eq('user_id', userId)
   const { data, error } = await supabase
-    .from('reviews')
-    .select('*, professors(id, name_en), courses(id, code, name_en)')
-    .eq('user_id', userId)
+    .from('review_feed')
+    .select('*')
+    .eq('is_own', true)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
   if (!data) return [];
-
-  // 自己看自己，author_anonymous_id 单独取一次（所有 review 都是同一个 user_id）
-  let anonymousId: string | null = null;
-  const { data: anon } = await supabase.rpc('get_anonymous_id', {
-    p_user_id: userId
-  });
-  anonymousId = (anon as string | null) ?? null;
 
   const voteStats = await fetchVoteStats(
     supabase,
@@ -194,14 +169,9 @@ export async function listReviewsForUser(
 
   return data.map((r) => {
     const row = r as Record<string, unknown>;
-    const prof = row.professors as { name_en?: string } | null;
-    const course = row.courses as
-      | { code?: string; name_en?: string }
-      | null;
     const votes = voteStats.get(row.id as string) ?? EMPTY_VOTES;
     return {
       id: row.id as string,
-      user_id: row.user_id as string,
       course_id: row.course_id as string,
       professor_id: row.professor_id as string,
       semester: row.semester as string,
@@ -210,10 +180,11 @@ export async function listReviewsForUser(
       content_en: (row.content_en as string | null) ?? null,
       is_visible: row.is_visible as boolean,
       created_at: row.created_at as string,
-      author_anonymous_id: anonymousId,
-      professor_name_en: prof?.name_en ?? '',
-      course_code: course?.code ?? '',
-      course_name_en: course?.name_en ?? '',
+      author_anonymous_id: (row.author_anonymous_id as string | null) ?? null,
+      professor_name_en: (row.professor_name_en as string | null) ?? '',
+      is_own: true,
+      course_code: (row.course_code as string | null) ?? '',
+      course_name_en: (row.course_name_en as string | null) ?? '',
       ...votes
     };
   });
@@ -296,13 +267,14 @@ export async function setReviewVote(
 ): Promise<void> {
   const supabase = await createClient();
 
+  // review_feed 不暴露 user_id，归属判断用视图算好的 is_own
   const { data: review } = await supabase
-    .from('reviews')
-    .select('id, user_id')
+    .from('review_feed')
+    .select('id, is_own')
     .eq('id', reviewId)
     .maybeSingle();
   if (!review) throw new Error('review_not_found');
-  if (review.user_id === userId) throw new Error('cannot_vote_own');
+  if (review.is_own) throw new Error('cannot_vote_own');
 
   if (vote === 0) {
     const { error } = await supabase
@@ -324,11 +296,12 @@ export async function setReviewVote(
 }
 
 /** 改评价内容（不允许改 prof / semester / site，FEATURES.md 约定）。
- *  评价不存在或不属于该用户时抛 review_not_found（0 行匹配不算成功）。 */
+ *  归属校验靠 RLS 的 reviews_update_self（user_id 列已对客户端隐藏，
+ *  不能再用 eq('user_id') 过滤）；评价不存在或不属于当前用户时
+ *  更新命中 0 行 → 抛 review_not_found。 */
 export async function updateReview(
   id: string,
-  payload: ReviewUpdatePayload,
-  userId: string
+  payload: ReviewUpdatePayload
 ): Promise<void> {
   const supabase = await createClient();
 
@@ -339,7 +312,6 @@ export async function updateReview(
       content_en: payload.content_en ?? null
     })
     .eq('id', id)
-    .eq('user_id', userId)
     .select('id');
 
   if (error) throw error;
@@ -347,26 +319,21 @@ export async function updateReview(
 }
 
 /** 软删（PATCH is_visible=false）。RLS 保证只能操作自己的。 */
-export async function softDeleteReview(id: string, userId: string): Promise<void> {
-  await setReviewVisibility(id, userId, false);
+export async function softDeleteReview(id: string): Promise<void> {
+  await setReviewVisibility(id, false);
 }
 
 /** 恢复（is_visible=true）。 */
-export async function restoreReview(id: string, userId: string): Promise<void> {
-  await setReviewVisibility(id, userId, true);
+export async function restoreReview(id: string): Promise<void> {
+  await setReviewVisibility(id, true);
 }
 
-async function setReviewVisibility(
-  id: string,
-  userId: string,
-  isVisible: boolean
-): Promise<void> {
+async function setReviewVisibility(id: string, isVisible: boolean): Promise<void> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('reviews')
     .update({ is_visible: isVisible })
     .eq('id', id)
-    .eq('user_id', userId)
     .select('id');
   if (error) throw error;
   if (!data || data.length === 0) throw new Error('review_not_found');
